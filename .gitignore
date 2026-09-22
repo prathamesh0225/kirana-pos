@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+build/
+
+# Electron/Vite
+.vite/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+temp/

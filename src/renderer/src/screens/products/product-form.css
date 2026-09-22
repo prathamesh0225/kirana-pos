@@ -1,0 +1,253 @@
+.product-form {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f6f6f6;
+  color: #222222;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.product-form-header {
+  height: 54px;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  background: #ffffff;
+  border-bottom: 1px solid #d5d5d5;
+}
+
+.product-form-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.product-form-subtitle {
+  margin-top: 2px;
+  color: #777777;
+  font-size: 12px;
+}
+
+.product-form-shortcuts {
+  display: flex;
+  gap: 16px;
+  color: #666666;
+  font-size: 12px;
+}
+
+.product-form-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.product-fields {
+  width: 650px;
+  margin: 22px 24px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #dddddd;
+}
+
+.product-fields label {
+  display: grid;
+  grid-template-columns: 175px 1fr;
+  align-items: center;
+  min-height: 39px;
+}
+
+.product-fields label span {
+  color: #444444;
+  font-weight: 600;
+}
+
+.product-fields input {
+  width: 100%;
+  height: 29px;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border: 1px solid #bcbcbc;
+  border-radius: 2px;
+  outline: none;
+  background: #ffffff;
+  color: #222222;
+  font-size: 14px;
+}
+
+.product-fields input:focus {
+  border-color: #555555;
+  box-shadow: 0 0 0 1px #555555;
+}
+
+.number-input {
+  text-align: right;
+}
+
+.stock-note {
+  margin: 8px 0 4px 175px;
+  padding: 7px 9px;
+  border: 1px solid #dddddd;
+  background: #f8f8f8;
+  color: #777777;
+  font-size: 11px;
+}
+
+.product-form-error {
+  margin: 0 24px;
+  width: 650px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d0a0a0;
+  background: #fff7f7;
+  color: #9b3333;
+  font-size: 13px;
+}
+
+.product-form-footer {
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  background: #ffffff;
+  border-top: 1px solid #d5d5d5;
+}
+
+.footer-hints {
+  display: flex;
+  gap: 18px;
+  color: #777777;
+  font-size: 11px;
+}
+
+.product-form-footer button {
+  min-width: 76px;
+  height: 28px;
+  margin-left: 8px;
+  border: 1px solid #aaaaaa;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #333333;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.product-form-footer button:first-of-type {
+  margin-left: auto;
+}
+
+.product-form-footer button:hover {
+  background: #f0f0f0;
+}
+
+.product-form-footer button:focus {
+  outline: 2px solid #777777;
+  outline-offset: 1px;
+}
+
+.product-form-footer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.product-form-loading {
+  padding: 40px;
+  color: #666666;
+}
+
+/* Confirmation */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.confirm-dialog {
+  width: 360px;
+  background: #ffffff;
+  border: 1px solid #bdbdbd;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.confirm-title {
+  padding: 11px 14px;
+  border-bottom: 1px solid #dddddd;
+  background: #f5f5f5;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.confirm-message {
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #333333;
+  font-size: 14px;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.confirm-buttons button {
+  width: 74px;
+  height: 28px;
+  border: 1px solid #aaaaaa;
+  border-radius: 2px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.confirm-buttons button:first-child {
+  background: #eeeeee;
+  font-weight: 600;
+}
+
+.confirm-buttons button:focus {
+  outline: 2px solid #666666;
+  outline-offset: 1px;
+}
+
+.confirm-help {
+  padding: 7px;
+  border-top: 1px solid #eeeeee;
+  color: #888888;
+  text-align: center;
+  font-size: 10px;
+}
+
+.product-fields select {
+  width: 100%;
+  height: 29px;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border: 1px solid #bcbcbc;
+  border-radius: 2px;
+  outline: none;
+  background: #ffffff;
+  color: #222222;
+  font-size: 14px;
+}
+
+.product-fields select:focus {
+  border-color: #555555;
+  box-shadow: 0 0 0 1px #555555;
+}
