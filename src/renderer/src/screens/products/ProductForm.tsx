@@ -64,6 +64,7 @@ function ProductForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [dialog, setDialog] = useState<DialogType>(null)
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false)
 
   const barcodeRef = useRef<HTMLInputElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)

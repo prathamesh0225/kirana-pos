@@ -2,16 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import './item-master.css'
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
 type ItemMasterProps = {
+  mode?: 'manage' | 'select'
   onBack: () => void
   onAddItem: () => void
   onEditItem: (productId: number) => void
+  onSelectItem?: (product: ProductRecord) => void
 }
 
 function formatRupees(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`
 }
 
-function ItemMaster({ onBack, onAddItem, onEditItem }: ItemMasterProps): React.JSX.Element {
+function ItemMaster({
+  mode = 'manage',
+  onBack,
+  onAddItem,
+  onEditItem,
+  onSelectItem
+}: ItemMasterProps): React.JSX.Element {
   const [products, setProducts] = useState<ProductRecord[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -71,6 +79,18 @@ function ItemMaster({ onBack, onAddItem, onEditItem }: ItemMasterProps): React.J
         return
       }
 
+      if (event.key === 'Enter' && mode === 'select') {
+        event.preventDefault()
+
+        const selectedProduct = products[selectedIndex]
+
+        if (selectedProduct && onSelectItem) {
+          onSelectItem(selectedProduct)
+        }
+
+        return
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault()
 
@@ -101,9 +121,7 @@ function ItemMaster({ onBack, onAddItem, onEditItem }: ItemMasterProps): React.J
       if (event.key === 'ArrowUp') {
         event.preventDefault()
 
-        setSelectedIndex((current) => {
-          return Math.max(current - 1, 0)
-        })
+        setSelectedIndex((current) => Math.max(current - 1, 0))
 
         return
       }
@@ -119,12 +137,6 @@ function ItemMaster({ onBack, onAddItem, onEditItem }: ItemMasterProps): React.J
 
         return
       }
-
-      // IMPORTANT:
-      // Enter intentionally does nothing here.
-      //
-      // Enter-to-add-product belongs to the Billing
-      // product-search context only.
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -132,7 +144,7 @@ function ItemMaster({ onBack, onAddItem, onEditItem }: ItemMasterProps): React.J
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onAddItem, onBack, onEditItem, products, searchTerm, selectedIndex])
+  }, [mode, onAddItem, onBack, onEditItem, onSelectItem, products, searchTerm, selectedIndex])
 
   function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>): void {
     setSearchTerm(event.target.value)

@@ -1,0 +1,292 @@
+.billing-screen {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  background: #dce8f0;
+  color: #172b3b;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+}
+
+.billing-title-bar {
+  height: 28px;
+  flex: 0 0 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 10px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  font-weight: 700;
+}
+
+.billing-date {
+  font-weight: 400;
+}
+
+/* Header */
+
+.billing-header {
+  height: 76px;
+  flex: 0 0 76px;
+
+  display: grid;
+  grid-template-columns: 50% 50%;
+
+  border-bottom: 1px solid #7890a2;
+
+  background: #d7e5ee;
+}
+
+.billing-header-column {
+  padding: 7px 12px;
+}
+
+.billing-header-column + .billing-header-column {
+  border-left: 1px solid #8ea3b2;
+}
+
+.billing-field {
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+}
+
+.billing-field label {
+  width: 90px;
+  flex: 0 0 90px;
+
+  font-weight: 700;
+}
+
+.billing-field input {
+  width: 260px;
+  height: 23px;
+
+  padding: 2px 5px;
+
+  border: 1px solid #8499a8;
+  border-radius: 0;
+
+  background: #ffffff;
+
+  font-family: inherit;
+  font-size: 13px;
+
+  outline: none;
+}
+
+.billing-field input:focus {
+  border-color: #173f66;
+}
+
+/* Grid */
+
+.billing-grid-wrapper {
+  flex: 1;
+  min-height: 0;
+
+  overflow: hidden;
+
+  background: #eef3f6;
+}
+
+.billing-table {
+  width: 100%;
+
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.billing-table th,
+.billing-table td {
+  border-right: 1px solid #a3b3bf;
+  border-bottom: 1px solid #b8c5ce;
+}
+
+.billing-table th {
+  height: 30px;
+
+  padding: 3px 7px;
+
+  background: #b9cfdd;
+
+  color: #173650;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  text-align: left;
+}
+
+.billing-table td {
+  height: 29px;
+
+  padding: 2px 7px;
+
+  background: #f0f4f6;
+}
+
+.billing-table .product-column {
+  width: 46%;
+}
+
+.billing-table th:not(.product-column),
+.billing-table td:not(.product-column) {
+  width: 10.8%;
+}
+
+.billing-row-selected td {
+  background: #172f47;
+  color: #ffffff;
+}
+
+.product-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.product-entry input {
+  width: 220px;
+  height: 23px;
+
+  padding: 2px 5px;
+
+  border: 1px solid #718594;
+  border-radius: 0;
+
+  background: #ffffff;
+
+  font-family: inherit;
+  font-size: 13px;
+
+  outline: none;
+}
+
+.product-entry span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.number-cell {
+  text-align: right;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-cell {
+  font-weight: 700;
+}
+
+.empty-row td {
+  height: 29px;
+  background: #f0f4f6;
+}
+
+/* Summary */
+
+.billing-summary {
+  height: 88px;
+  flex: 0 0 88px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+
+  padding: 6px 20px;
+
+  border-top: 1px solid #758b9c;
+
+  background: #d9e6ee;
+}
+
+.billing-summary > div {
+  width: 260px;
+
+  display: flex;
+  justify-content: space-between;
+
+  padding: 2px 0;
+}
+
+.billing-total {
+  margin-top: 4px;
+  padding-top: 5px !important;
+
+  border-top: 1px solid #718594;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Footer */
+
+.billing-footer {
+  height: 26px;
+  flex: 0 0 26px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 20px;
+
+  padding: 0 10px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
+
+.product-not-found {
+  color: #ffdddd;
+  font-weight: 700;
+}
+
+.billing-not-found {
+  height: 24px;
+  flex: 0 0 24px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 10px;
+
+  background: #5a2020;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.billing-number-input {
+  width: 100%;
+  height: 24px;
+  box-sizing: border-box;
+  border: 1px solid #315a7d;
+  background: #fff;
+  color: #172b3b;
+  padding: 1px 4px;
+  text-align: right;
+  font: inherit;
+  outline: none;
+}
+
+.billing-number-input:focus {
+  border: 2px solid #173f66;
+  padding: 0 3px;
+}

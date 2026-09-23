@@ -27,9 +27,16 @@ function ConfirmDialog({
     confirmRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent): void {
+      event.stopPropagation()
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        onConfirm()
+        return
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault()
-        event.stopPropagation()
         onCancel()
       }
     }
@@ -39,7 +46,7 @@ function ConfirmDialog({
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onCancel])
+  }, [onConfirm, onCancel])
 
   return (
     <Modal title={title} onClose={onCancel} initialFocus="none">

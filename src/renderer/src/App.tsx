@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import Billing from './screens/billing/Billing'
 import ItemMaster from './screens/products/ItemMaster'
 import ProductForm from './screens/products/ProductForm'
 
 type Screen =
+  | {
+      type: 'billing'
+    }
   | {
       type: 'item-master'
     }
@@ -17,8 +21,20 @@ type Screen =
 
 function App(): React.JSX.Element {
   const [screen, setScreen] = useState<Screen>({
-    type: 'item-master'
+    type: 'billing'
   })
+
+  if (screen.type === 'billing') {
+    return (
+      <Billing
+        onBack={() => {
+          // existing
+        }}
+        onAddItem={() => setScreen({ type: 'add-item' })}
+        onEditItem={(productId) => setScreen({ type: 'edit-item', productId })}
+      />
+    )
+  }
 
   if (screen.type === 'add-item') {
     return (
@@ -59,8 +75,9 @@ function App(): React.JSX.Element {
   return (
     <ItemMaster
       onBack={() => {
-        // Billing/main menu navigation will be connected later.
-        // For now Item Master is the root screen.
+        setScreen({
+          type: 'billing'
+        })
       }}
       onAddItem={() => {
         setScreen({
