@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './billing.css'
-import type { BillingLine, BillingSession } from './billing.types'
 import ItemMaster from '../products/ItemMaster'
+import type { BillingLine, BillingSession } from './billing.types'
 
 type BillingProps = {
+  session: BillingSession
+  onSessionChange: React.Dispatch<React.SetStateAction<BillingSession>>
   onBack: () => void
   onAddItem?: () => void
   onEditItem?: (productId: number) => void
@@ -11,28 +13,23 @@ type BillingProps = {
 
 type BillingField = 'product' | 'quantity' | 'free' | 'rate'
 
-const EMPTY_LINE: BillingLine = {
-  id: 1,
-  productId: null,
-  productName: '',
-  isTemporary: false,
-  barcode: null,
-  quantityPrecision: 0,
-  mrpPaise: 0,
-  quantity: 0,
-  freeQuantity: 0,
-  ratePaise: 0,
-  amountPaise: 0
-}
-
 function formatRupees(paise: number): string {
   return (paise / 100).toFixed(2)
 }
 
 function createEmptyLine(): BillingLine {
   return {
-    ...EMPTY_LINE,
-    id: Date.now() + Math.random()
+    id: Date.now() + Math.random(),
+    productId: null,
+    productName: '',
+    isTemporary: false,
+    barcode: null,
+    quantityPrecision: 0,
+    mrpPaise: 0,
+    quantity: 0,
+    freeQuantity: 0,
+    ratePaise: 0,
+    amountPaise: 0
   }
 }
 
@@ -48,28 +45,53 @@ function calculateAmount(quantity: number, ratePaise: number): number {
   return Math.round(quantity * ratePaise)
 }
 
-function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Element {
-  const [lines, setLines] = useState<BillingLine[]>([EMPTY_LINE])
+function Billing({
+  session,
+  onSessionChange,
+  onBack,
+  onAddItem,
+  onEditItem
+}: BillingProps): React.JSX.Element {
+  const { lines } = session
+
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [activeField, setActiveField] = useState<BillingField>('product')
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [barcodeNotFound, setBarcodeNotFound] = useState(false)
-  const [rateInput, setRateInput] = useState('')
-  const [showItemSelector, setShowItemSelector] = useState(false)
 
-  const [customerName, setCustomerName] = useState('')
-  const [customerMobile, setCustomerMobile] = useState('')
+  const [rateInput, setRateInput] = useState('')
+
+  const [showItemSelector, setShowItemSelector] = useState(false)
+  const [quantityShortcutError, setQuantityShortcutError] = useState('')
 
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const quantityInputRef = useRef<HTMLInputElement>(null)
   const freeInputRef = useRef<HTMLInputElement>(null)
   const rateInputRef = useRef<HTMLInputElement>(null)
 
+  const customerName = session.customerName
+  const customerMobile = session.customerMobile
+
   const subtotalPaise = useMemo(
     () => lines.reduce((total, line) => total + line.amountPaise, 0),
     [lines]
   )
+
+  /*
+   * ---------------------------------------------------------
+   * Restore Billing UI after returning from Item Master/Form
+   * ---------------------------------------------------------
+   */
+
+  useEffect(() => {
+    const bottomIndex = Math.max(lines.length - 1, 0)
+
+    setSelectedIndex(bottomIndex)
+    setActiveField('product')
+    setBarcodeInput('')
+    setRateInput('')
+  }, [])
 
   /*
    * ---------------------------------------------------------
@@ -85,16 +107,19 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
     const frame = requestAnimationFrame(() => {
       if (activeField === 'product') {
         barcodeInputRef.current?.focus()
+        return
       }
 
       if (activeField === 'quantity') {
         quantityInputRef.current?.focus()
         quantityInputRef.current?.select()
+        return
       }
 
       if (activeField === 'free') {
         freeInputRef.current?.focus()
         freeInputRef.current?.select()
+        return
       }
 
       if (activeField === 'rate') {
@@ -110,18 +135,6 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
    * ---------------------------------------------------------
    * Billing keyboard shortcuts
    * ---------------------------------------------------------
-   *
-   * Enter is deliberately NOT handled globally here.
-   *
-   * Enter inside:
-   *   - product input
-   *   - quantity input
-   *   - free input
-   *   - rate input
-   *
-   * is handled by those controls themselves.
-   *
-   * For an already-added product row, Enter starts QTY.
    */
 
   useEffect(() => {
@@ -133,9 +146,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       if (event.key === 'ArrowDown') {
         event.preventDefault()
 
-        setSelectedIndex((current) => {
-          return Math.min(current + 1, lines.length - 1)
-        })
+        setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
 
         setActiveField('product')
         return
@@ -144,9 +155,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       if (event.key === 'ArrowUp') {
         event.preventDefault()
 
-        setSelectedIndex((current) => {
-          return Math.max(current - 1, 0)
-        })
+        setSelectedIndex((current) => Math.max(current - 1, 0))
 
         setActiveField('product')
         return
@@ -159,6 +168,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
 
         setSelectedIndex(lastIndex)
         setActiveField('product')
+        setBarcodeInput('')
         setBarcodeNotFound(false)
         return
       }
@@ -168,27 +178,32 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
 
         const selectedLine = lines[selectedIndex]
 
+        /*
+         * Blank row cannot be deleted.
+         *
+         * Normal product OR temporary General Item can be deleted.
+         */
         if (!selectedLine || (selectedLine.productId === null && !selectedLine.isTemporary)) {
           return
         }
 
-        if (lines.length === 1) {
-          return
-        }
+        onSessionChange((currentSession) => {
+          const remainingLines = currentSession.lines.filter((_, index) => index !== selectedIndex)
 
-        setLines((currentLines) => currentLines.filter((_, index) => index !== selectedIndex))
+          return {
+            ...currentSession,
+            lines: remainingLines.length > 0 ? remainingLines : [createEmptyLine()]
+          }
+        })
 
         setSelectedIndex((currentIndex) => {
-          const newLength = lines.length - 1
-
-          if (newLength <= 0) {
-            return 0
-          }
-
+          const newLength = Math.max(lines.length - 1, 1)
           return Math.min(currentIndex, newLength - 1)
         })
 
         setActiveField('product')
+        setBarcodeInput('')
+        setRateInput('')
         return
       }
 
@@ -223,19 +238,21 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       }
 
       /*
-       * Existing product row:
+       * Existing product OR General Item:
        *
-       * Product row selected
-       *       ↓ Enter
+       * Product row
+       *      ↓ Enter
        * QTY
        */
+      const selectedLine = lines[selectedIndex]
+
       if (
         event.key === 'Enter' &&
-        (lines[selectedIndex]?.productId !== null || lines[selectedIndex]?.isTemporary) &&
-        activeField === 'product'
+        activeField === 'product' &&
+        selectedLine &&
+        (selectedLine.productId !== null || selectedLine.isTemporary)
       ) {
         event.preventDefault()
-
         setActiveField('quantity')
       }
     }
@@ -245,17 +262,46 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [activeField, barcodeNotFound, lines, onBack, selectedIndex, showItemSelector])
+  }, [
+    activeField,
+    barcodeNotFound,
+    lines,
+    onBack,
+    onSessionChange,
+    selectedIndex,
+    showItemSelector
+  ])
 
   /*
    * ---------------------------------------------------------
-   * Barcode input
+   * Customer fields
+   * ---------------------------------------------------------
+   */
+
+  function handleCustomerMobileChange(value: string): void {
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      customerMobile: value
+    }))
+  }
+
+  function handleCustomerNameChange(value: string): void {
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      customerName: value
+    }))
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * Barcode
    * ---------------------------------------------------------
    */
 
   function handleBarcodeChange(value: string): void {
     setBarcodeInput(value)
     setBarcodeNotFound(false)
+    setQuantityShortcutError('')
   }
 
   async function lookupBarcode(): Promise<void> {
@@ -268,14 +314,6 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
     try {
       const product = await window.kirana.products.getByBarcode(barcode)
 
-      /*
-       * Unknown barcode:
-       *
-       * Do NOT open Item Master.
-       * Do NOT create a permanent product.
-       *
-       * Create a temporary General Item in this bill.
-       */
       if (!product) {
         addTemporaryGeneralItem(barcode)
         return
@@ -295,6 +333,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
 
   function addProductToBottomRow(product: ProductRecord): void {
     const newProductLine: BillingLine = {
+      id: Date.now() + Math.random(),
       productId: product.id,
       productName: product.name,
       isTemporary: false,
@@ -307,19 +346,35 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       amountPaise: product.selling_price_paise
     }
 
-    setLines((current) => {
-      const bottomIndex = current.length - 1
+    const bottomIndex = lines.length - 1
 
-      return [...current.slice(0, bottomIndex), newProductLine, createEmptyLine()]
+    onSessionChange((currentSession) => {
+      const currentBottomIndex = currentSession.lines.length - 1
+
+      return {
+        ...currentSession,
+        lines: [
+          ...currentSession.lines.slice(0, currentBottomIndex),
+          newProductLine,
+          createEmptyLine()
+        ]
+      }
     })
 
-    // IMPORTANT: clear the previous barcode.
+    /*
+     * IMPORTANT:
+     * Clear previous barcode so the new blank row is actually blank.
+     */
     setBarcodeInput('')
     setBarcodeNotFound(false)
 
-    // Go directly to the new blank row.
-    setSelectedIndex((current) => current + 1)
+    /*
+     * Product was added with QTY = 1.
+     * Go directly to the next blank row.
+     */
+    setSelectedIndex(bottomIndex + 1)
     setActiveField('product')
+    setRateInput('')
   }
 
   /*
@@ -331,30 +386,44 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
   function addTemporaryGeneralItem(barcode: string): void {
     const bottomIndex = lines.length - 1
 
-    setLines((currentLines) =>
-      currentLines.map((line, index) =>
-        index === bottomIndex
-          ? {
-              ...line,
-              productId: null,
-              productName: 'General Item',
-              isTemporary: true,
-              barcode,
-              quantityPrecision: 0,
-              mrpPaise: 0,
-              quantity: 1,
-              freeQuantity: 0,
-              ratePaise: 0,
-              amountPaise: 0
-            }
-          : line
-      )
-    )
+    const generalItemLine: BillingLine = {
+      ...lines[bottomIndex],
+      id: Date.now() + Math.random(),
+      productId: null,
+      productName: 'General Item',
+      isTemporary: true,
+      barcode,
+      quantityPrecision: 0,
+      mrpPaise: 0,
+      quantity: 1,
+      freeQuantity: 0,
+      ratePaise: 0,
+      amountPaise: 0
+    }
+
+    onSessionChange((currentSession) => {
+      const currentBottomIndex = currentSession.lines.length - 1
+
+      return {
+        ...currentSession,
+        lines: [
+          ...currentSession.lines.slice(0, currentBottomIndex),
+          generalItemLine,
+          createEmptyLine()
+        ]
+      }
+    })
 
     setBarcodeInput('')
     setBarcodeNotFound(false)
+
+    /*
+     * General Item needs editing, so select the General Item
+     * rather than the new blank row.
+     */
     setSelectedIndex(bottomIndex)
     setActiveField('quantity')
+    setRateInput('')
   }
 
   /*
@@ -370,16 +439,15 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
     setActiveField('product')
     setBarcodeInput('')
     setBarcodeNotFound(false)
+    setRateInput('')
     setShowItemSelector(true)
   }
 
   function handleProductSelected(product: ProductRecord): void {
-    setShowItemSelector(false)
-
     const bottomIndex = lines.length - 1
 
     const newProductLine: BillingLine = {
-      ...lines[bottomIndex],
+      id: Date.now() + Math.random(),
       productId: product.id,
       productName: product.name,
       isTemporary: false,
@@ -392,18 +460,27 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       amountPaise: product.selling_price_paise
     }
 
-    setLines((currentLines) => [
-      ...currentLines.slice(0, bottomIndex),
-      newProductLine,
-      createEmptyLine()
-    ])
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      lines: [
+        ...currentSession.lines.slice(0, currentSession.lines.length - 1),
+        newProductLine,
+        createEmptyLine()
+      ]
+    }))
 
-    // Product added with default QTY = 1.
-    // Move directly to the next blank row.
-    setSelectedIndex(bottomIndex + 1)
-    setActiveField('product')
+    setShowItemSelector(false)
+
     setBarcodeInput('')
     setBarcodeNotFound(false)
+    setRateInput('')
+
+    /*
+     * Same behavior as barcode:
+     * QTY defaults to 1 and cursor goes to next blank row.
+     */
+    setSelectedIndex(bottomIndex + 1)
+    setActiveField('product')
   }
 
   /*
@@ -412,6 +489,87 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
    * ---------------------------------------------------------
    */
 
+  function handleQuickQuantity(value: string): boolean {
+    const input = value.trim()
+    const match = input.match(/^\+(\d+(?:\.\d+)?)$/)
+
+    // Starts with +, so it belongs to quick-quantity handling.
+    if (input.startsWith('+') && !match) {
+      setQuantityShortcutError('Invalid quantity shortcut. Example: +5')
+      setBarcodeInput('')
+      return true
+    }
+
+    if (!match) {
+      return false
+    }
+
+    const quantity = Number(match[1])
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setQuantityShortcutError('Quantity must be greater than zero')
+      setBarcodeInput('')
+      return true
+    }
+
+    const previousIndex = selectedIndex - 1
+
+    if (previousIndex < 0) {
+      setQuantityShortcutError('No previous item to change quantity')
+      setBarcodeInput('')
+      return true
+    }
+
+    const previousLine = lines[previousIndex]
+
+    if (!previousLine || (previousLine.productId === null && !previousLine.isTemporary)) {
+      setQuantityShortcutError('No previous item to change quantity')
+      setBarcodeInput('')
+      return true
+    }
+
+    const precision = previousLine.quantityPrecision
+
+    if (precision === 0 && !Number.isInteger(quantity)) {
+      setQuantityShortcutError(
+        `${previousLine.productName} uses PCS and does not support decimal quantity`
+      )
+      setBarcodeInput('')
+      return true
+    }
+
+    const factor = 10 ** precision
+    const roundedQuantity = Math.round(quantity * factor) / factor
+
+    if (roundedQuantity !== quantity) {
+      setQuantityShortcutError(
+        `Quantity supports up to ${precision} decimal place${precision === 1 ? '' : 's'}`
+      )
+      setBarcodeInput('')
+      return true
+    }
+
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((line, index) =>
+        index === previousIndex
+          ? {
+              ...line,
+              quantity,
+              amountPaise: calculateAmount(quantity, line.ratePaise)
+            }
+          : line
+      )
+    }))
+
+    setQuantityShortcutError('')
+    setBarcodeInput('')
+    setSelectedIndex(lines.length - 1)
+    setActiveField('product')
+
+    return true
+  }
+
   function handleQuantityChange(value: string): void {
     const quantity = value === '' ? 0 : Number(value)
 
@@ -419,14 +577,9 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       return
     }
 
-    const line = lines[selectedIndex]
-
-    if (!line) {
-      return
-    }
-
-    setLines((currentLines) =>
-      currentLines.map((currentLine, index) =>
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
           ? {
               ...currentLine,
@@ -435,7 +588,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
             }
           : currentLine
       )
-    )
+    }))
   }
 
   function handleQuantityEnter(): void {
@@ -455,8 +608,9 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
       return
     }
 
-    setLines((currentLines) =>
-      currentLines.map((currentLine, index) =>
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
           ? {
               ...currentLine,
@@ -464,7 +618,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
             }
           : currentLine
       )
-    )
+    }))
   }
 
   function handleFreeEnter(): void {
@@ -484,7 +638,18 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
    */
 
   function handleRateChange(value: string): void {
-    // Allow empty value and up to 2 decimal places.
+    /*
+     * Keep rate as text while typing.
+     *
+     * This allows:
+     * 1
+     * 12
+     * 120
+     * 120.5
+     * 120.50
+     *
+     * without React changing the value underneath the cursor.
+     */
     if (!/^\d*(\.\d{0,2})?$/.test(value)) {
       return
     }
@@ -501,8 +666,9 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
 
     const ratePaise = Math.round(rate * 100)
 
-    setLines((currentLines) =>
-      currentLines.map((currentLine, index) =>
+    onSessionChange((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
           ? {
               ...currentLine,
@@ -511,65 +677,30 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
             }
           : currentLine
       )
-    )
+    }))
 
     handleRateEnter()
   }
 
   function handleRateEnter(): void {
-    setSelectedIndex((current) => {
-      const nextIndex = current + 1
+    const currentIndex = selectedIndex
 
-      // Never go beyond the final blank row.
-      return Math.min(nextIndex, lines.length - 1)
-    })
+    /*
+     * Move exactly one row down.
+     *
+     * If the next row is another product, select it.
+     * If the current row is the last product, select blank row.
+     */
+    setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
 
     setActiveField('product')
+    setBarcodeInput('')
+    setRateInput('')
   }
-
-  function focusAndSelectInput(ref: React.RefObject<HTMLInputElement | null>): void {
-    requestAnimationFrame(() => {
-      ref.current?.focus()
-      ref.current?.select()
-    })
-  }
-
-  useEffect(() => {
-    if (showItemSelector) {
-      return
-    }
-
-    const frame = requestAnimationFrame(() => {
-      if (activeField === 'product') {
-        barcodeInputRef.current?.focus()
-        return
-      }
-
-      if (activeField === 'quantity') {
-        quantityInputRef.current?.focus()
-        quantityInputRef.current?.select()
-        return
-      }
-
-      if (activeField === 'free') {
-        freeInputRef.current?.focus()
-        freeInputRef.current?.select()
-        return
-      }
-
-      if (activeField === 'rate') {
-        rateInputRef.current?.focus()
-        rateInputRef.current?.select()
-        return
-      }
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [selectedIndex, activeField, showItemSelector])
 
   /*
    * ---------------------------------------------------------
-   * Render Item Master selection mode
+   * Item Master selection mode
    * ---------------------------------------------------------
    */
 
@@ -579,20 +710,25 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
         mode="select"
         onBack={() => {
           setShowItemSelector(false)
+
           setSelectedIndex(lines.length - 1)
           setActiveField('product')
+          setBarcodeInput('')
+          setRateInput('')
         }}
         onAddItem={() => {
           /*
-           * Permanent Add Item remains owned by the existing
-           * Item Master/App flow.
+           * App owns ProductForm navigation.
+           *
+           * Billing session remains safely stored in App.
            */
           onAddItem?.()
         }}
         onEditItem={(productId) => {
           /*
-           * Permanent Edit Item remains owned by the
-           * existing Item Master/App flow.
+           * App owns ProductForm navigation.
+           *
+           * Billing session remains safely stored in App.
            */
           onEditItem?.(productId)
         }}
@@ -625,7 +761,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
 
             <input
               value={customerMobile}
-              onChange={(event) => setCustomerMobile(event.target.value)}
+              onChange={(event) => handleCustomerMobileChange(event.target.value)}
             />
           </div>
         </div>
@@ -639,7 +775,10 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
           <div className="billing-field">
             <label>Name :</label>
 
-            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+            <input
+              value={customerName}
+              onChange={(event) => handleCustomerNameChange(event.target.value)}
+            />
           </div>
         </div>
       </div>
@@ -660,6 +799,7 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
           <tbody>
             {lines.map((line, index) => {
               const selected = index === selectedIndex
+
               const isBottomBlank =
                 index === lines.length - 1 && line.productId === null && !line.isTemporary
 
@@ -669,13 +809,11 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
                   className={selected ? 'billing-row-selected' : ''}
                   onClick={() => {
                     setSelectedIndex(index)
+                    setActiveField('product')
 
                     if (line.productId === null && !line.isTemporary) {
-                      setActiveField('product')
-                      return
+                      setBarcodeInput('')
                     }
-
-                    setActiveField('product')
                   }}
                 >
                   <td className="product-column">
@@ -693,13 +831,11 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
                             event.preventDefault()
                             event.stopPropagation()
 
-                            /*
-                             * Blank row:
-                             *
-                             * Enter with text = barcode lookup.
-                             * Enter without text = Item Master.
-                             */
                             if (barcodeInput.trim()) {
+                              if (handleQuickQuantity(barcodeInput)) {
+                                return
+                              }
+
                               void lookupBarcode()
                             } else {
                               openItemSelector()
@@ -785,13 +921,15 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
                           inputMode="decimal"
                           value={rateInput}
                           onFocus={() => {
+                            /*
+                             * Load current rate into the editing
+                             * value and select it.
+                             */
                             setRateInput(
                               line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
                             )
                           }}
-                          onChange={(event) => {
-                            handleRateChange(event.target.value)
-                          }}
+                          onChange={(event) => handleRateChange(event.target.value)}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter') {
                               event.preventDefault()
@@ -826,6 +964,13 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
             ))}
           </tbody>
         </table>
+        {quantityShortcutError && <div className="billing-error">{quantityShortcutError}</div>}
+
+        {barcodeNotFound && (
+          <div className="billing-not-found">
+            Product not found — General Item created for this bill
+          </div>
+        )}
       </div>
 
       <div className="billing-summary">
@@ -844,12 +989,6 @@ function Billing({ onBack, onAddItem, onEditItem }: BillingProps): React.JSX.Ele
           <strong>₹{formatRupees(subtotalPaise)}</strong>
         </div>
       </div>
-
-      {barcodeNotFound && (
-        <div className="billing-not-found">
-          Product not found — General Item created for this bill
-        </div>
-      )}
 
       <div className="billing-footer">
         <span>F2 Add Item</span>

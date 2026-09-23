@@ -13,6 +13,8 @@ export type BillingLine = {
 }
 
 export type BillingSession = {
+  id: string
+  billNumber: string
   lines: BillingLine[]
   customerName: string
   customerMobile: string
