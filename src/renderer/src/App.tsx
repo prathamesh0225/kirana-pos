@@ -36,8 +36,10 @@ function createEmptyBillingLine() {
   }
 }
 
-function createNewBillingSession(): BillingSession {
+function createNewBillingSession(billNumber: string): BillingSession {
   return {
+    id: crypto.randomUUID(),
+    billNumber,
     lines: [createEmptyBillingLine()],
     customerName: '',
     customerMobile: ''
@@ -50,20 +52,63 @@ function App(): React.JSX.Element {
   })
 
   /*
-   * The active bill lives at App level.
+   * Exactly two billing sessions.
    *
-   * Billing can therefore be temporarily unmounted while
-   * Item Master / Product Form is open without losing the bill.
+   * Both bills stay alive in App state, so switching between
+   * them does not lose any entered items, customer details, etc.
    */
-  const [billingSession, setBillingSession] = useState<BillingSession>(createNewBillingSession())
+  const [billingSessions, setBillingSessions] = useState<[BillingSession, BillingSession]>([
+    createNewBillingSession('A000001'),
+    createNewBillingSession('A000002')
+  ])
+
+  /*
+   * 0 = Bill A000001
+   * 1 = Bill A000002
+   */
+  const [activeBillingIndex, setActiveBillingIndex] = useState<0 | 1>(0)
+
+  const activeBillingSession = billingSessions[activeBillingIndex]
+
+  /*
+   * Update only the currently active bill.
+   */
+  function updateActiveBillingSession(
+    update: BillingSession | ((current: BillingSession) => BillingSession)
+  ): void {
+    setBillingSessions((currentSessions) => {
+      const updatedSessions: [BillingSession, BillingSession] = [...currentSessions] as [
+        BillingSession,
+        BillingSession
+      ]
+
+      const currentSession = currentSessions[activeBillingIndex]
+
+      updatedSessions[activeBillingIndex] =
+        typeof update === 'function' ? update(currentSession) : update
+
+      return updatedSessions
+    })
+  }
+
+  /*
+   * Ctrl+N simply switches between the two bills.
+   *
+   * Bill A000001 -> Bill A000002
+   * Bill A000002 -> Bill A000001
+   */
+  function handleNewBill(): void {
+    setActiveBillingIndex((currentIndex) => (currentIndex === 0 ? 1 : 0))
+  }
 
   if (screen.type === 'billing') {
     return (
       <Billing
-        session={billingSession}
-        onSessionChange={setBillingSession}
+        session={activeBillingSession}
+        onSessionChange={updateActiveBillingSession}
+        onNewBill={handleNewBill}
         onBack={() => {
-          // Main menu will be connected later.
+          // existing navigation
         }}
         onAddItem={() => {
           setScreen({
@@ -85,13 +130,16 @@ function App(): React.JSX.Element {
       <ProductForm
         initialBarcode={screen.initialBarcode}
         onSaved={() => {
-          // Return to the active bill.
+          /*
+           * Return to the currently active bill.
+           * The bill itself was never lost because it lives
+           * in App-level billingSessions state.
+           */
           setScreen({
             type: 'billing'
           })
         }}
         onCancel={() => {
-          // Return to the active bill.
           setScreen({
             type: 'billing'
           })
@@ -105,13 +153,14 @@ function App(): React.JSX.Element {
       <ProductForm
         productId={screen.productId}
         onSaved={() => {
-          // Return to the active bill.
+          /*
+           * Return to the currently active bill.
+           */
           setScreen({
             type: 'billing'
           })
         }}
         onCancel={() => {
-          // Return to the active bill.
           setScreen({
             type: 'billing'
           })
@@ -122,6 +171,7 @@ function App(): React.JSX.Element {
 
   return (
     <ItemMaster
+      mode="manage"
       onBack={() => {
         setScreen({
           type: 'billing'

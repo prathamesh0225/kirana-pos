@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './billing.css'
 import ItemMaster from '../products/ItemMaster'
 import type { BillingLine, BillingSession } from './billing.types'
+import Payment, { type PaymentResult } from './Payment'
 
 type BillingProps = {
   session: BillingSession
@@ -9,6 +10,8 @@ type BillingProps = {
   onBack: () => void
   onAddItem?: () => void
   onEditItem?: (productId: number) => void
+  onNewBill: () => void
+  onPayment: () => void
 }
 
 type BillingField = 'product' | 'quantity' | 'free' | 'rate'
@@ -50,7 +53,9 @@ function Billing({
   onSessionChange,
   onBack,
   onAddItem,
-  onEditItem
+  onEditItem,
+  onNewBill,
+  onPayment
 }: BillingProps): React.JSX.Element {
   const { lines } = session
 
@@ -63,6 +68,8 @@ function Billing({
   const [rateInput, setRateInput] = useState('')
 
   const [showItemSelector, setShowItemSelector] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+
   const [quantityShortcutError, setQuantityShortcutError] = useState('')
 
   const barcodeInputRef = useRef<HTMLInputElement>(null)
@@ -91,7 +98,9 @@ function Billing({
     setActiveField('product')
     setBarcodeInput('')
     setRateInput('')
-  }, [])
+    setBarcodeNotFound(false)
+    setQuantityShortcutError('')
+  }, [session.id])
 
   /*
    * ---------------------------------------------------------
@@ -140,6 +149,30 @@ function Billing({
   useEffect(() => {
     if (showItemSelector) {
       return
+    }
+
+    function validateBillBeforePayment(): string | null {
+      const billLines = lines.filter((line) => line.productId !== null || line.isTemporary)
+
+      if (billLines.length === 0) {
+        return 'Cannot proceed to payment. Bill has no items.'
+      }
+
+      for (const line of billLines) {
+        if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
+          return `Quantity must be greater than zero for ${line.productName}.`
+        }
+
+        if (!Number.isFinite(line.ratePaise) || line.ratePaise < 0) {
+          return `Invalid rate for ${line.productName}.`
+        }
+
+        if (line.isTemporary && line.ratePaise <= 0) {
+          return `Enter a rate for ${line.productName} before payment.`
+        }
+      }
+
+      return null
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
@@ -209,9 +242,19 @@ function Billing({
 
       if (event.key === 'F6') {
         event.preventDefault()
+        event.stopPropagation()
 
-        // Payment screen will be connected here.
-        console.log('F6 Payment')
+        const validationError = validateBillBeforePayment()
+
+        if (validationError) {
+          setQuantityShortcutError(validationError)
+          return
+        }
+
+        setActiveField('product')
+
+        setQuantityShortcutError('')
+        setShowPayment(true)
         return
       }
 
@@ -220,6 +263,12 @@ function Billing({
 
         // Complete & Print will be connected here.
         console.log('F8 Complete & Print')
+        return
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        onNewBill()
         return
       }
 
@@ -744,263 +793,279 @@ function Billing({
    */
 
   return (
-    <div className="billing-screen">
-      <div className="billing-title-bar">
-        <div>SALE ENTRY</div>
-      </div>
+    <>
+      <div className="billing-screen">
+        <div className="billing-title-bar">
+          <div>SALE ENTRY</div>
+        </div>
 
-      <div className="billing-header">
-        <div className="billing-header-column">
-          <div className="billing-field">
-            <label>Bill No. :</label>
-            <strong>A000001</strong>
+        <div className="billing-header">
+          <div className="billing-header-column">
+            <div className="billing-field">
+              <label>Bill No. :</label>
+              <strong>{session.billNumber}</strong>
+            </div>
+
+            <div className="billing-field">
+              <label>Mobile :</label>
+
+              <input
+                value={customerMobile}
+                onChange={(event) => handleCustomerMobileChange(event.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="billing-field">
-            <label>Mobile :</label>
+          <div className="billing-header-column">
+            <div className="billing-field">
+              <label>Date :</label>
+              <strong>{new Date().toLocaleDateString('en-IN')}</strong>
+            </div>
 
-            <input
-              value={customerMobile}
-              onChange={(event) => handleCustomerMobileChange(event.target.value)}
-            />
+            <div className="billing-field">
+              <label>Name :</label>
+
+              <input
+                value={customerName}
+                onChange={(event) => handleCustomerNameChange(event.target.value)}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="billing-header-column">
-          <div className="billing-field">
-            <label>Date :</label>
-            <strong>{new Date().toLocaleDateString('en-IN')}</strong>
-          </div>
+        <div className="billing-grid-wrapper">
+          <table className="billing-table">
+            <thead>
+              <tr>
+                <th className="product-column">PRODUCT</th>
+                <th>MRP</th>
+                <th>QTY</th>
+                <th>FREE</th>
+                <th>RATE</th>
+                <th>AMOUNT</th>
+              </tr>
+            </thead>
 
-          <div className="billing-field">
-            <label>Name :</label>
+            <tbody>
+              {lines.map((line, index) => {
+                const selected = index === selectedIndex
 
-            <input
-              value={customerName}
-              onChange={(event) => handleCustomerNameChange(event.target.value)}
-            />
-          </div>
-        </div>
-      </div>
+                const isBottomBlank =
+                  index === lines.length - 1 && line.productId === null && !line.isTemporary
 
-      <div className="billing-grid-wrapper">
-        <table className="billing-table">
-          <thead>
-            <tr>
-              <th className="product-column">PRODUCT</th>
-              <th>MRP</th>
-              <th>QTY</th>
-              <th>FREE</th>
-              <th>RATE</th>
-              <th>AMOUNT</th>
-            </tr>
-          </thead>
+                return (
+                  <tr
+                    key={line.id}
+                    className={selected ? 'billing-row-selected' : ''}
+                    onClick={() => {
+                      setSelectedIndex(index)
+                      setActiveField('product')
 
-          <tbody>
-            {lines.map((line, index) => {
-              const selected = index === selectedIndex
-
-              const isBottomBlank =
-                index === lines.length - 1 && line.productId === null && !line.isTemporary
-
-              return (
-                <tr
-                  key={line.id}
-                  className={selected ? 'billing-row-selected' : ''}
-                  onClick={() => {
-                    setSelectedIndex(index)
-                    setActiveField('product')
-
-                    if (line.productId === null && !line.isTemporary) {
-                      setBarcodeInput('')
-                    }
-                  }}
-                >
-                  <td className="product-column">
-                    {isBottomBlank && selected ? (
-                      <div className="product-entry">
-                        <input
-                          ref={barcodeInputRef}
-                          value={barcodeInput}
-                          onChange={(event) => handleBarcodeChange(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key !== 'Enter') {
-                              return
-                            }
-
-                            event.preventDefault()
-                            event.stopPropagation()
-
-                            if (barcodeInput.trim()) {
-                              if (handleQuickQuantity(barcodeInput)) {
+                      if (line.productId === null && !line.isTemporary) {
+                        setBarcodeInput('')
+                      }
+                    }}
+                  >
+                    <td className="product-column">
+                      {isBottomBlank && selected ? (
+                        <div className="product-entry">
+                          <input
+                            ref={barcodeInputRef}
+                            value={barcodeInput}
+                            onChange={(event) => handleBarcodeChange(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter') {
                                 return
                               }
 
-                              void lookupBarcode()
-                            } else {
-                              openItemSelector()
-                            }
-                          }}
-                          placeholder="Scan / search product"
-                          autoComplete="off"
-                          spellCheck={false}
-                        />
-                      </div>
-                    ) : (
-                      <span className={line.isTemporary ? 'temporary-general-item' : ''}>
-                        {line.productName}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="number-cell">
-                    {line.mrpPaise > 0 ? formatRupees(line.mrpPaise) : ''}
-                  </td>
-
-                  <td className="number-cell">
-                    {line.productId !== null || line.isTemporary ? (
-                      selected && activeField === 'quantity' ? (
-                        <input
-                          ref={quantityInputRef}
-                          className="billing-number-input"
-                          type="number"
-                          min="0"
-                          step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                          value={line.quantity === 0 ? '' : line.quantity}
-                          onChange={(event) => handleQuantityChange(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
                               event.preventDefault()
                               event.stopPropagation()
-                              handleQuantityEnter()
-                            }
-                          }}
-                        />
+
+                              if (barcodeInput.trim()) {
+                                if (handleQuickQuantity(barcodeInput)) {
+                                  return
+                                }
+
+                                void lookupBarcode()
+                              } else {
+                                openItemSelector()
+                              }
+                            }}
+                            placeholder="Scan / search product"
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                        </div>
                       ) : (
-                        line.quantity
-                      )
-                    ) : (
-                      ''
-                    )}
-                  </td>
+                        <span className={line.isTemporary ? 'temporary-general-item' : ''}>
+                          {line.productName}
+                        </span>
+                      )}
+                    </td>
 
-                  <td className="number-cell">
-                    {line.productId !== null || line.isTemporary ? (
-                      selected && activeField === 'free' ? (
-                        <input
-                          ref={freeInputRef}
-                          className="billing-number-input"
-                          type="number"
-                          min="0"
-                          step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                          value={line.freeQuantity === 0 ? '' : line.freeQuantity}
-                          onChange={(event) => handleFreeChange(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              handleFreeEnter()
-                            }
-                          }}
-                        />
-                      ) : (
-                        line.freeQuantity
-                      )
-                    ) : (
-                      ''
-                    )}
-                  </td>
+                    <td className="number-cell">
+                      {line.mrpPaise > 0 ? formatRupees(line.mrpPaise) : ''}
+                    </td>
 
-                  <td className="number-cell">
-                    {line.productId !== null || line.isTemporary ? (
-                      selected && activeField === 'rate' ? (
-                        <input
-                          ref={rateInputRef}
-                          className="billing-number-input"
-                          type="text"
-                          inputMode="decimal"
-                          value={rateInput}
-                          onFocus={() => {
-                            /*
-                             * Load current rate into the editing
-                             * value and select it.
-                             */
-                            setRateInput(
-                              line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
-                            )
-                          }}
-                          onChange={(event) => handleRateChange(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              commitRate()
-                            }
-                          }}
-                        />
-                      ) : line.ratePaise > 0 ? (
-                        formatRupees(line.ratePaise)
+                    <td className="number-cell">
+                      {line.productId !== null || line.isTemporary ? (
+                        selected && activeField === 'quantity' ? (
+                          <input
+                            ref={quantityInputRef}
+                            className="billing-number-input"
+                            type="number"
+                            min="0"
+                            step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                            value={line.quantity === 0 ? '' : line.quantity}
+                            onChange={(event) => handleQuantityChange(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                handleQuantityEnter()
+                              }
+                            }}
+                          />
+                        ) : (
+                          line.quantity
+                        )
                       ) : (
                         ''
-                      )
-                    ) : (
-                      ''
-                    )}
-                  </td>
+                      )}
+                    </td>
 
-                  <td className="number-cell amount-cell">
-                    {line.amountPaise > 0 ? formatRupees(line.amountPaise) : ''}
-                  </td>
+                    <td className="number-cell">
+                      {line.productId !== null || line.isTemporary ? (
+                        selected && activeField === 'free' ? (
+                          <input
+                            ref={freeInputRef}
+                            className="billing-number-input"
+                            type="number"
+                            min="0"
+                            step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                            value={line.freeQuantity === 0 ? '' : line.freeQuantity}
+                            onChange={(event) => handleFreeChange(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                handleFreeEnter()
+                              }
+                            }}
+                          />
+                        ) : (
+                          line.freeQuantity
+                        )
+                      ) : (
+                        ''
+                      )}
+                    </td>
+
+                    <td className="number-cell">
+                      {line.productId !== null || line.isTemporary ? (
+                        selected && activeField === 'rate' ? (
+                          <input
+                            ref={rateInputRef}
+                            className="billing-number-input"
+                            type="text"
+                            inputMode="decimal"
+                            value={rateInput}
+                            onFocus={() => {
+                              /*
+                               * Load current rate into the editing
+                               * value and select it.
+                               */
+                              setRateInput(
+                                line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
+                              )
+                            }}
+                            onChange={(event) => handleRateChange(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                commitRate()
+                              }
+                            }}
+                          />
+                        ) : line.ratePaise > 0 ? (
+                          formatRupees(line.ratePaise)
+                        ) : (
+                          ''
+                        )
+                      ) : (
+                        ''
+                      )}
+                    </td>
+
+                    <td className="number-cell amount-cell">
+                      {line.amountPaise > 0 ? formatRupees(line.amountPaise) : ''}
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {Array.from({
+                length: Math.max(8, 12 - lines.length)
+              }).map((_, index) => (
+                <tr key={`empty-${index}`} className="empty-row">
+                  <td colSpan={6} />
                 </tr>
-              )
-            })}
+              ))}
+            </tbody>
+          </table>
+          {quantityShortcutError && <div className="billing-error">{quantityShortcutError}</div>}
 
-            {Array.from({
-              length: Math.max(8, 12 - lines.length)
-            }).map((_, index) => (
-              <tr key={`empty-${index}`} className="empty-row">
-                <td colSpan={6} />
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {quantityShortcutError && <div className="billing-error">{quantityShortcutError}</div>}
+          {barcodeNotFound && (
+            <div className="billing-not-found">
+              Product not found — General Item created for this bill
+            </div>
+          )}
+        </div>
 
-        {barcodeNotFound && (
-          <div className="billing-not-found">
-            Product not found — General Item created for this bill
+        <div className="billing-summary">
+          <div>
+            <span>Subtotal</span>
+            <strong>₹{formatRupees(subtotalPaise)}</strong>
           </div>
-        )}
-      </div>
 
-      <div className="billing-summary">
-        <div>
-          <span>Subtotal</span>
-          <strong>₹{formatRupees(subtotalPaise)}</strong>
+          <div>
+            <span>Discount</span>
+            <strong>₹0.00</strong>
+          </div>
+
+          <div className="billing-total">
+            <span>TOTAL</span>
+            <strong>₹{formatRupees(subtotalPaise)}</strong>
+          </div>
         </div>
 
-        <div>
-          <span>Discount</span>
-          <strong>₹0.00</strong>
-        </div>
-
-        <div className="billing-total">
-          <span>TOTAL</span>
-          <strong>₹{formatRupees(subtotalPaise)}</strong>
+        <div className="billing-footer">
+          <span>F2 Add Item</span>
+          <span>Enter Add</span>
+          <span>Delete Remove</span>
+          <span>F6 Payment</span>
+          <span>F8 Complete &amp; Print</span>
+          <span>Esc Back</span>
+          <span>Ctrl+N New Bill</span>
+          <span>Ctrl+P Reprint</span>
         </div>
       </div>
+      {showPayment && (
+        <Payment
+          session={session}
+          totalPaise={subtotalPaise}
+          onBack={() => {
+            setShowPayment(false)
+          }}
+          onComplete={(payment: PaymentResult) => {
+            console.log('Payment received:', payment)
 
-      <div className="billing-footer">
-        <span>F2 Add Item</span>
-        <span>Enter Add</span>
-        <span>Delete Remove</span>
-        <span>F6 Payment</span>
-        <span>F8 Complete &amp; Print</span>
-        <span>Esc Back</span>
-        <span>Ctrl+N New Bill</span>
-        <span>Ctrl+P Reprint</span>
-      </div>
-    </div>
+            setShowPayment(false)
+          }}
+        />
+      )}
+    </>
   )
 }
 

@@ -302,3 +302,155 @@
   line-height: 1.3;
   text-align: left;
 }
+
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.payment-dialog {
+  width: 520px;
+
+  background: #f4f4f4;
+
+  border: 2px solid #333;
+
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+
+  font-size: 14px;
+}
+
+.payment-title {
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 10px;
+
+  background: #d9d9d9;
+
+  border-bottom: 1px solid #777;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+
+  padding: 8px 10px;
+
+  background: #eeeeee;
+
+  border-bottom: 1px solid #aaa;
+}
+
+.payment-header span {
+  margin-right: 6px;
+}
+
+.payment-header strong {
+  font-weight: 700;
+}
+
+.payment-body {
+  padding: 6px 0;
+
+  background: #ffffff;
+}
+
+.payment-row {
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 4px 12px;
+
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.payment-row label,
+.payment-row span {
+  font-weight: 700;
+}
+
+.payment-row input {
+  width: 170px;
+  height: 30px;
+
+  box-sizing: border-box;
+
+  padding: 3px 7px;
+
+  border: 1px solid #777;
+
+  background: #ffffff;
+
+  color: #000000;
+
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+
+  text-align: right;
+
+  outline: none;
+}
+
+.payment-row input:focus {
+  border: 2px solid #333;
+  background: #fffde8;
+}
+
+.payment-active-row {
+  background: #f0f0f0;
+}
+
+.payment-total {
+  background: #e5e5e5;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.payment-error {
+  margin: 7px 10px;
+
+  padding: 7px 10px;
+
+  border: 1px solid #b00020;
+
+  background: #fff0f0;
+
+  color: #b00020;
+
+  font-weight: 700;
+}
+
+.payment-footer {
+  min-height: 30px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 18px;
+
+  padding: 0 10px;
+
+  background: #dedede;
+
+  border-top: 1px solid #888;
+
+  font-size: 12px;
+}
