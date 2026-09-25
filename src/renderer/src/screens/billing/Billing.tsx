@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './billing.css'
 import ItemMaster from '../products/ItemMaster'
+import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
 import type { BillingLine, BillingSession } from './billing.types'
 import Payment, { type PaymentResult } from './Payment'
 
@@ -12,6 +13,7 @@ type BillingProps = {
   onEditItem?: (productId: number) => void
   onNewBill: () => void
   onPayment: () => void
+  onBillCompleted: (billNumber: string) => void
 }
 
 type BillingField = 'product' | 'quantity' | 'free' | 'rate'
@@ -55,7 +57,7 @@ function Billing({
   onAddItem,
   onEditItem,
   onNewBill,
-  onPayment
+  onBillCompleted
 }: BillingProps): React.JSX.Element {
   const { lines } = session
 
@@ -69,6 +71,10 @@ function Billing({
 
   const [showItemSelector, setShowItemSelector] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+
+  const [pendingPayment, setPendingPayment] = useState<PaymentResult | null>(null)
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false)
+  const [showPrintConfirmation, setShowPrintConfirmation] = useState(false)
 
   const [quantityShortcutError, setQuantityShortcutError] = useState('')
 
@@ -747,6 +753,15 @@ function Billing({
     setRateInput('')
   }
 
+  function startNextBill(): void {
+    setPendingPayment(null)
+    setShowPayment(false)
+    setShowCompleteConfirmation(false)
+    setShowPrintConfirmation(false)
+
+    onNewBill()
+  }
+
   /*
    * ---------------------------------------------------------
    * Item Master selection mode
@@ -1059,9 +1074,75 @@ function Billing({
             setShowPayment(false)
           }}
           onComplete={(payment: PaymentResult) => {
-            console.log('Payment received:', payment)
-
+            setPendingPayment(payment)
+            setShowCompleteConfirmation(true)
             setShowPayment(false)
+          }}
+        />
+      )}
+
+      {showCompleteConfirmation && pendingPayment && (
+        <ConfirmDialog
+          title="Complete Bill"
+          message={`Complete bill ${session.billNumber}?`}
+          onConfirm={async () => {
+            if (!pendingPayment) {
+              return
+            }
+
+            try {
+              const result = await window.kirana.billing.completeSale({
+                billNumber: session.billNumber,
+                customerName: session.customerName,
+                customerMobile: session.customerMobile,
+
+                lines: lines.filter((line) => line.productId !== null || line.isTemporary),
+
+                payment: pendingPayment
+              })
+
+              console.log('Sale completed:', result)
+
+              setShowCompleteConfirmation(false)
+              setPendingPayment(null)
+              setShowPayment(false)
+
+              await onBillCompleted(result.billNumber)
+            } catch (error) {
+              console.error('Failed to complete sale:', error)
+
+              const message = error instanceof Error ? error.message : 'Failed to complete bill.'
+
+              setShowCompleteConfirmation(false)
+              setPendingPayment(null)
+
+              alert(message)
+            }
+          }}
+          onCancel={() => {
+            setShowCompleteConfirmation(false)
+            setPendingPayment(null)
+          }}
+        />
+      )}
+
+      {showPrintConfirmation && (
+        <ConfirmDialog
+          title="Print Bill"
+          message={`Print bill ${session.billNumber}?`}
+          onConfirm={() => {
+            setShowPrintConfirmation(false)
+
+            // Printer integration will go here.
+            console.log('Print bill:', session.billNumber)
+
+            startNextBill()
+          }}
+          onCancel={() => {
+            setShowPrintConfirmation(false)
+
+            // No printer required.
+            startNextBill()
           }}
         />
       )}

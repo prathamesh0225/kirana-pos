@@ -56,6 +56,15 @@ const api = {
     disable: (productId: number) => ipcRenderer.invoke('products:disable', productId),
 
     enable: (productId: number) => ipcRenderer.invoke('products:enable', productId)
+  },
+
+  billing: {
+    getSlots: () => ipcRenderer.invoke('billing:getSlots'),
+
+    allocateNextBillNumber: (slotId: 0 | 1) =>
+      ipcRenderer.invoke('billing:allocateNextBillNumber', slotId),
+
+    completeSale: (input: unknown) => ipcRenderer.invoke('billing:completeSale', input)
   }
 }
 

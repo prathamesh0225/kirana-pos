@@ -172,6 +172,65 @@ const migrations: Migration[] = [
       ALTER TABLE products
         ADD COLUMN quantity_precision INTEGER NOT NULL DEFAULT 0;
     `
+  },
+  {
+    version: 4,
+    name: 'bill_number_sequence',
+    sql: `
+    CREATE TABLE IF NOT EXISTS bill_number_sequence (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      next_number INTEGER NOT NULL
+    );
+
+    INSERT OR IGNORE INTO bill_number_sequence (
+      id,
+      next_number
+    )
+    VALUES (1, 1);
+  `
+  },
+  {
+    version: 5,
+    name: 'sale_items_for_billing',
+    sql: `
+    DROP TABLE IF EXISTS sale_items;
+
+    CREATE TABLE sale_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      product_id INTEGER,
+
+      product_name TEXT NOT NULL,
+      barcode TEXT,
+      mrp_paise INTEGER NOT NULL DEFAULT 0,
+      quantity REAL NOT NULL,
+      free_quantity REAL NOT NULL DEFAULT 0,
+      rate_paise INTEGER NOT NULL DEFAULT 0,
+      amount_paise INTEGER NOT NULL DEFAULT 0,
+
+      FOREIGN KEY (sale_id)
+        REFERENCES sales(id),
+
+      FOREIGN KEY (product_id)
+        REFERENCES products(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sale_items_sale
+      ON sale_items(sale_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sale_items_product
+      ON sale_items(product_id);
+  `
+  },
+  {
+    version: 6,
+    name: 'billing_slots',
+    sql: `
+    CREATE TABLE IF NOT EXISTS billing_slots (
+      slot_id INTEGER PRIMARY KEY,
+      bill_number TEXT NOT NULL
+    );
+  `
   }
 ]
 
