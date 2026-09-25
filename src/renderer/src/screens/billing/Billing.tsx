@@ -1104,10 +1104,8 @@ function Billing({
               console.log('Sale completed:', result)
 
               setShowCompleteConfirmation(false)
-              setPendingPayment(null)
               setShowPayment(false)
-
-              await onBillCompleted(result.billNumber)
+              setShowPrintConfirmation(true)
             } catch (error) {
               console.error('Failed to complete sale:', error)
 
@@ -1130,19 +1128,18 @@ function Billing({
         <ConfirmDialog
           title="Print Bill"
           message={`Print bill ${session.billNumber}?`}
-          onConfirm={() => {
+          onConfirm={async () => {
             setShowPrintConfirmation(false)
+            setPendingPayment(null)
 
-            // Printer integration will go here.
-            console.log('Print bill:', session.billNumber)
-
-            startNextBill()
+            // Printer integration will be added later.
+            await onBillCompleted(session.billNumber)
           }}
-          onCancel={() => {
+          onCancel={async () => {
             setShowPrintConfirmation(false)
+            setPendingPayment(null)
 
-            // No printer required.
-            startNextBill()
+            await onBillCompleted(session.billNumber)
           }}
         />
       )}
