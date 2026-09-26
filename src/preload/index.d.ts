@@ -85,6 +85,85 @@ declare global {
           saleId: number
           billNumber: string
         }>
+
+        processSaleReturn: (input: unknown) => Promise<{
+          returnId: number
+          saleId: number
+          totalRefundPaise: number
+        }>
+
+        listSales: (limit?: number) => Promise<
+          Array<{
+            id: number
+            billNumber: string
+            saleDate: string
+            totalPaise: number
+            status: string
+            refundedPaise: number
+            netPaise: number
+          }>
+        >
+
+        getSaleById: (saleId: number) => Promise<{
+          id: number
+          billNumber: string
+          saleDate: string
+          subtotalPaise: number
+          discountPaise: number
+          totalPaise: number
+          status: string
+          items: Array<{
+            id: number
+            productId: number | null
+            productName: string
+            barcode: string | null
+            mrpPaise: number
+            quantity: number
+            freeQuantity: number
+            ratePaise: number
+            amountPaise: number
+          }>
+          payments: Array<{
+            id: number
+            paymentMethod: string
+            amountPaise: number
+          }>
+          returns: Array<{
+            id: number
+            returnDate: string
+            totalRefundPaise: number
+            status: string
+          }>
+          refundedPaise: number
+          netPaise: number
+        } | null>
+
+        updateSale: (input: {
+          saleId: number
+          customerName?: string
+          customerMobile?: string
+          lines: Array<{
+            saleItemId?: number
+            productId: number | null
+            productName: string
+            barcode: string | null
+            mrpPaise: number
+            quantity: number
+            freeQuantity: number
+            ratePaise: number
+            amountPaise: number
+          }>
+          paymentAdjustment?: {
+            type: 'charge' | 'refund'
+            method: 'cash' | 'upi'
+            amountPaise: number
+          }
+        }) => Promise<{
+          saleId: number
+          billNumber: string
+          totalPaise: number
+          adjustmentPaise: number
+        }>
       }
     }
   }

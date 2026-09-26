@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './billing.css'
 import ItemMaster from '../products/ItemMaster'
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
-import type { BillingLine, BillingSession } from './billing.types'
+import type { BillingLine, BillingSession, BillingMode } from './billing.types'
 import Payment, { type PaymentResult } from './Payment'
+import ErrorDialog from '../../components/error-dialog/ErrorDialog'
 
 type BillingProps = {
   session: BillingSession
@@ -14,9 +15,16 @@ type BillingProps = {
   onNewBill: () => void
   onPayment: () => void
   onBillCompleted: (billNumber: string) => void
+  onOpenBillHistory: () => void
+
+  mode?: BillingMode
+  saleId?: number
+  onModifyMode?: () => void
+  onHistoricalSaved?: () => void
 }
 
 type BillingField = 'product' | 'quantity' | 'free' | 'rate'
+type HistoricalAction = 'modify' | 'print' | 'delete'
 
 function formatRupees(paise: number): string {
   return (paise / 100).toFixed(2)
@@ -50,6 +58,53 @@ function calculateAmount(quantity: number, ratePaise: number): number {
   return Math.round(quantity * ratePaise)
 }
 
+function createBillingSessionFromSale(sale: {
+  id: number
+  billNumber: string
+  saleDate: string
+  subtotalPaise: number
+  discountPaise: number
+  totalPaise: number
+  status: string
+  items: Array<{
+    id: number
+    productId: number | null
+    productName: string
+    barcode: string | null
+    mrpPaise: number
+    quantity: number
+    freeQuantity: number
+    ratePaise: number
+    amountPaise: number
+    quantityPrecision?: number
+  }>
+}): BillingSession {
+  return {
+    id: `history-${sale.id}`,
+    billNumber: sale.billNumber,
+    lines: [
+      ...sale.items.map((item) => ({
+        id: item.id,
+        saleItemId: item.id,
+
+        productId: item.productId,
+        productName: item.productName,
+        isTemporary: item.productId === null,
+        barcode: item.barcode,
+        quantityPrecision: item.quantityPrecision ?? 3,
+        mrpPaise: item.mrpPaise,
+        quantity: item.quantity,
+        freeQuantity: item.freeQuantity,
+        ratePaise: item.ratePaise,
+        amountPaise: item.amountPaise
+      })),
+      createEmptyLine()
+    ],
+    customerName: '',
+    customerMobile: ''
+  }
+}
+
 function Billing({
   session,
   onSessionChange,
@@ -57,10 +112,13 @@ function Billing({
   onAddItem,
   onEditItem,
   onNewBill,
-  onBillCompleted
+  onBillCompleted,
+  onOpenBillHistory,
+  mode = 'active',
+  saleId,
+  onModifyMode,
+  onHistoricalSaved
 }: BillingProps): React.JSX.Element {
-  const { lines } = session
-
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [activeField, setActiveField] = useState<BillingField>('product')
 
@@ -74,22 +132,133 @@ function Billing({
 
   const [pendingPayment, setPendingPayment] = useState<PaymentResult | null>(null)
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false)
+  const [isCompletingSale, setIsCompletingSale] = useState(false)
   const [showPrintConfirmation, setShowPrintConfirmation] = useState(false)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [errorDialogMessage, setErrorDialogMessage] = useState('')
 
   const [quantityShortcutError, setQuantityShortcutError] = useState('')
+
+  const [historicalSession, setHistoricalSession] = useState<BillingSession | null>(null)
+
+  const [historicalLoading, setHistoricalLoading] = useState(false)
+
+  const [historicalError, setHistoricalError] = useState('')
+  const [historicalActionIndex, setHistoricalActionIndex] = useState(-1)
+
+  const [historicalOriginalTotalPaise, setHistoricalOriginalTotalPaise] = useState(0)
+
+  const [showHistoricalPayment, setShowHistoricalPayment] = useState(false)
+
+  const [pendingHistoricalPayment, setPendingHistoricalPayment] = useState<PaymentResult | null>(
+    null
+  )
+
+  const [showHistoricalRefundConfirmation, setShowHistoricalRefundConfirmation] = useState(false)
+
+  const [isSavingHistoricalBill, setIsSavingHistoricalBill] = useState(false)
+
+  const isHistoricalBill = mode === 'view' || mode === 'modify'
+  const isReadOnly = mode === 'view'
+
+  const displaySession = isHistoricalBill && historicalSession ? historicalSession : session
+
+  const { lines } = displaySession
 
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const quantityInputRef = useRef<HTMLInputElement>(null)
   const freeInputRef = useRef<HTMLInputElement>(null)
   const rateInputRef = useRef<HTMLInputElement>(null)
 
-  const customerName = session.customerName
-  const customerMobile = session.customerMobile
+  const customerName = displaySession.customerName
+  const customerMobile = displaySession.customerMobile
+
+  function updateCurrentSession(updater: (currentSession: BillingSession) => BillingSession): void {
+    if (isHistoricalBill) {
+      setHistoricalSession((currentSession) =>
+        currentSession ? updater(currentSession) : currentSession
+      )
+      return
+    }
+
+    onSessionChange(updater)
+  }
+
+  function getHistoricalAction(): HistoricalAction | null {
+    if (historicalActionIndex < 0 || historicalActionIndex > 2) {
+      return null
+    }
+
+    return ['modify', 'print', 'delete'][historicalActionIndex] as HistoricalAction
+  }
+
+  function handleHistoricalAction(action: HistoricalAction): void {
+    if (action === 'modify') {
+      onModifyMode?.()
+      return
+    }
+
+    if (action === 'print') {
+      window.print()
+      return
+    }
+
+    setShowErrorDialog(true)
+    setErrorDialogMessage(
+      'Delete/void for historical bills is not enabled yet. The bill has not been changed.'
+    )
+  }
 
   const subtotalPaise = useMemo(
     () => lines.reduce((total, line) => total + line.amountPaise, 0),
     [lines]
   )
+  // Bill History View, Modify Bill
+  useEffect(() => {
+    if (!isHistoricalBill || !saleId) {
+      setHistoricalSession(null)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadHistoricalBill(): Promise<void> {
+      try {
+        setHistoricalLoading(true)
+        setHistoricalError('')
+
+        const sale = await window.kirana.billing.getSaleById(saleId)
+
+        if (cancelled) {
+          return
+        }
+
+        if (!sale) {
+          setHistoricalError('Bill not found.')
+          return
+        }
+
+        setHistoricalOriginalTotalPaise(sale.totalPaise)
+        setHistoricalSession(createBillingSessionFromSale(sale))
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setHistoricalError(error instanceof Error ? error.message : 'Unable to load bill.')
+      } finally {
+        if (!cancelled) {
+          setHistoricalLoading(false)
+        }
+      }
+    }
+
+    void loadHistoricalBill()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isHistoricalBill, saleId])
 
   /*
    * ---------------------------------------------------------
@@ -106,7 +275,11 @@ function Billing({
     setRateInput('')
     setBarcodeNotFound(false)
     setQuantityShortcutError('')
-  }, [session.id])
+  }, [displaySession.id])
+
+  useEffect(() => {
+    setHistoricalActionIndex(-1)
+  }, [mode, saleId])
 
   /*
    * ---------------------------------------------------------
@@ -115,7 +288,7 @@ function Billing({
    */
 
   useEffect(() => {
-    if (showItemSelector) {
+    if (showItemSelector || isReadOnly) {
       return
     }
 
@@ -144,7 +317,7 @@ function Billing({
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [selectedIndex, activeField, showItemSelector])
+  }, [selectedIndex, activeField, showItemSelector, isReadOnly])
 
   /*
    * ---------------------------------------------------------
@@ -182,6 +355,62 @@ function Billing({
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
+      if (isReadOnly) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
+          setActiveField('product')
+          return
+        }
+
+        if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          setSelectedIndex((current) => Math.max(current - 1, 0))
+          setActiveField('product')
+          return
+        }
+
+        if (event.key === 'ArrowRight') {
+          event.preventDefault()
+          setHistoricalActionIndex((current) => Math.min(current + 1, 2))
+          return
+        }
+
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault()
+          setHistoricalActionIndex((current) => Math.max(current - 1, 0))
+          return
+        }
+
+        if (event.key === 'F3' && isReadOnly) {
+          event.preventDefault()
+          onModifyMode?.()
+          return
+        }
+
+        if (event.key === 'Enter' && isReadOnly) {
+          event.preventDefault()
+
+          const action = getHistoricalAction()
+
+          if (action) {
+            handleHistoricalAction(action)
+          }
+
+          return
+        }
+
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onBack()
+          return
+        }
+
+        if (isReadOnly) {
+          return
+        }
+      }
+
       if (event.key === 'ArrowDown') {
         event.preventDefault()
 
@@ -203,6 +432,10 @@ function Billing({
       if (event.key === 'F2') {
         event.preventDefault()
 
+        if (isReadOnly) {
+          return
+        }
+
         const lastIndex = lines.length - 1
 
         setSelectedIndex(lastIndex)
@@ -215,18 +448,17 @@ function Billing({
       if (event.key === 'Delete') {
         event.preventDefault()
 
+        if (isReadOnly) {
+          return
+        }
+
         const selectedLine = lines[selectedIndex]
 
-        /*
-         * Blank row cannot be deleted.
-         *
-         * Normal product OR temporary General Item can be deleted.
-         */
         if (!selectedLine || (selectedLine.productId === null && !selectedLine.isTemporary)) {
           return
         }
 
-        onSessionChange((currentSession) => {
+        updateCurrentSession((currentSession) => {
           const remainingLines = currentSession.lines.filter((_, index) => index !== selectedIndex)
 
           return {
@@ -250,6 +482,18 @@ function Billing({
         event.preventDefault()
         event.stopPropagation()
 
+        // VIEW BILL: F6 does nothing
+        if (isReadOnly) {
+          return
+        }
+
+        // MODIFY BILL: F6 saves the modification
+        if (mode === 'modify') {
+          void handleSaveHistoricalBill()
+          return
+        }
+
+        // NORMAL SALE ENTRY: F6 opens Payment
         const validationError = validateBillBeforePayment()
 
         if (validationError) {
@@ -258,22 +502,29 @@ function Billing({
         }
 
         setActiveField('product')
-
         setQuantityShortcutError('')
         setShowPayment(true)
         return
       }
 
-      if (event.key === 'F8') {
+      if (event.key === 'F9') {
         event.preventDefault()
 
-        // Complete & Print will be connected here.
-        console.log('F8 Complete & Print')
+        if (isReadOnly) {
+          return
+        }
+
+        onOpenBillHistory()
         return
       }
 
       if (event.ctrlKey && event.key.toLowerCase() === 'n') {
         event.preventDefault()
+
+        if (isReadOnly) {
+          return
+        }
+
         onNewBill()
         return
       }
@@ -292,13 +543,6 @@ function Billing({
         return
       }
 
-      /*
-       * Existing product OR General Item:
-       *
-       * Product row
-       *      ↓ Enter
-       * QTY
-       */
       const selectedLine = lines[selectedIndex]
 
       if (
@@ -320,8 +564,13 @@ function Billing({
   }, [
     activeField,
     barcodeNotFound,
+    isHistoricalBill,
+    isReadOnly,
     lines,
     onBack,
+    onModifyMode,
+    onNewBill,
+    onOpenBillHistory,
     onSessionChange,
     selectedIndex,
     showItemSelector
@@ -334,14 +583,14 @@ function Billing({
    */
 
   function handleCustomerMobileChange(value: string): void {
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       customerMobile: value
     }))
   }
 
   function handleCustomerNameChange(value: string): void {
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       customerName: value
     }))
@@ -360,6 +609,10 @@ function Billing({
   }
 
   async function lookupBarcode(): Promise<void> {
+    if (isReadOnly) {
+      return
+    }
+
     const barcode = barcodeInput.trim()
 
     if (!barcode) {
@@ -387,6 +640,10 @@ function Billing({
    */
 
   function addProductToBottomRow(product: ProductRecord): void {
+    if (isReadOnly) {
+      return
+    }
+
     const newProductLine: BillingLine = {
       id: Date.now() + Math.random(),
       productId: product.id,
@@ -403,7 +660,7 @@ function Billing({
 
     const bottomIndex = lines.length - 1
 
-    onSessionChange((currentSession) => {
+    updateCurrentSession((currentSession) => {
       const currentBottomIndex = currentSession.lines.length - 1
 
       return {
@@ -439,6 +696,10 @@ function Billing({
    */
 
   function addTemporaryGeneralItem(barcode: string): void {
+    if (isReadOnly) {
+      return
+    }
+
     const bottomIndex = lines.length - 1
 
     const generalItemLine: BillingLine = {
@@ -456,7 +717,7 @@ function Billing({
       amountPaise: 0
     }
 
-    onSessionChange((currentSession) => {
+    updateCurrentSession((currentSession) => {
       const currentBottomIndex = currentSession.lines.length - 1
 
       return {
@@ -488,6 +749,10 @@ function Billing({
    */
 
   function openItemSelector(): void {
+    if (isReadOnly) {
+      return
+    }
+
     const bottomIndex = lines.length - 1
 
     setSelectedIndex(bottomIndex)
@@ -499,6 +764,10 @@ function Billing({
   }
 
   function handleProductSelected(product: ProductRecord): void {
+    if (isReadOnly) {
+      return
+    }
+
     const bottomIndex = lines.length - 1
 
     const newProductLine: BillingLine = {
@@ -515,7 +784,7 @@ function Billing({
       amountPaise: product.selling_price_paise
     }
 
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       lines: [
         ...currentSession.lines.slice(0, currentSession.lines.length - 1),
@@ -604,7 +873,7 @@ function Billing({
       return true
     }
 
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       lines: currentSession.lines.map((line, index) =>
         index === previousIndex
@@ -632,7 +901,7 @@ function Billing({
       return
     }
 
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
@@ -663,7 +932,7 @@ function Billing({
       return
     }
 
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
@@ -721,7 +990,7 @@ function Billing({
 
     const ratePaise = Math.round(rate * 100)
 
-    onSessionChange((currentSession) => ({
+    updateCurrentSession((currentSession) => ({
       ...currentSession,
       lines: currentSession.lines.map((currentLine, index) =>
         index === selectedIndex
@@ -738,8 +1007,6 @@ function Billing({
   }
 
   function handleRateEnter(): void {
-    const currentIndex = selectedIndex
-
     /*
      * Move exactly one row down.
      *
@@ -753,6 +1020,114 @@ function Billing({
     setRateInput('')
   }
 
+  async function saveHistoricalBill(paymentAdjustment?: {
+    type: 'charge' | 'refund'
+    method: 'cash' | 'upi'
+    amountPaise: number
+  }): Promise<void> {
+    if (!saleId || !historicalSession) {
+      return
+    }
+
+    if (isSavingHistoricalBill) {
+      return
+    }
+
+    const billLines = historicalSession.lines.filter(
+      (line) => line.productId !== null || line.isTemporary
+    )
+
+    if (billLines.length === 0) {
+      setErrorDialogMessage('Cannot save a bill without items.')
+      setShowErrorDialog(true)
+      return
+    }
+
+    for (const line of billLines) {
+      if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
+        setErrorDialogMessage(`Quantity must be greater than zero for ${line.productName}.`)
+        setShowErrorDialog(true)
+        return
+      }
+
+      if (!Number.isFinite(line.freeQuantity) || line.freeQuantity < 0) {
+        setErrorDialogMessage(`Invalid free quantity for ${line.productName}.`)
+        setShowErrorDialog(true)
+        return
+      }
+
+      if (!Number.isFinite(line.ratePaise) || line.ratePaise < 0) {
+        setErrorDialogMessage(`Invalid rate for ${line.productName}.`)
+        setShowErrorDialog(true)
+        return
+      }
+    }
+
+    try {
+      setIsSavingHistoricalBill(true)
+
+      const result = await window.kirana.billing.updateSale({
+        saleId,
+
+        customerName: historicalSession.customerName,
+
+        customerMobile: historicalSession.customerMobile,
+
+        lines: billLines.map((line) => ({
+          saleItemId: line.saleItemId,
+
+          productId: line.productId,
+          productName: line.productName,
+          barcode: line.barcode,
+
+          mrpPaise: line.mrpPaise,
+          quantity: line.quantity,
+          freeQuantity: line.freeQuantity,
+          ratePaise: line.ratePaise,
+
+          amountPaise: Math.round(line.quantity * line.ratePaise)
+        })),
+
+        paymentAdjustment
+      })
+
+      console.log('Historical bill updated:', result)
+
+      onHistoricalSaved?.()
+    } catch (error) {
+      console.error('Failed to modify bill:', error)
+
+      setErrorDialogMessage(error instanceof Error ? error.message : 'Failed to modify bill.')
+
+      setShowErrorDialog(true)
+    } finally {
+      setIsSavingHistoricalBill(false)
+    }
+  }
+
+  function handleSaveHistoricalBill(): void {
+    if (!historicalSession) {
+      return
+    }
+
+    const newTotal = historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0)
+
+    const difference = newTotal - historicalOriginalTotalPaise
+
+    if (difference === 0) {
+      void saveHistoricalBill()
+      return
+    }
+
+    if (difference > 0) {
+      setPendingHistoricalPayment(null)
+      setShowHistoricalPayment(true)
+      return
+    }
+
+    setShowHistoricalRefundConfirmation(true)
+  }
+
   function startNextBill(): void {
     setPendingPayment(null)
     setShowPayment(false)
@@ -760,6 +1135,31 @@ function Billing({
     setShowPrintConfirmation(false)
 
     onNewBill()
+  }
+
+  if (isHistoricalBill && historicalLoading) {
+    return (
+      <div className="billing-screen">
+        <div className="billing-title-bar">
+          <div>VIEW BILL</div>
+        </div>
+        <div className="billing-error">Loading bill...</div>
+      </div>
+    )
+  }
+
+  if (isHistoricalBill && historicalError && !historicalSession) {
+    return (
+      <div className="billing-screen">
+        <div className="billing-title-bar">
+          <div>VIEW BILL</div>
+        </div>
+        <div className="billing-error">{historicalError}</div>
+        <div className="billing-footer">
+          <span>Esc Back</span>
+        </div>
+      </div>
+    )
   }
 
   /*
@@ -811,14 +1211,14 @@ function Billing({
     <>
       <div className="billing-screen">
         <div className="billing-title-bar">
-          <div>SALE ENTRY</div>
+          <div>{isHistoricalBill ? (isReadOnly ? 'VIEW BILL' : 'MODIFY BILL') : 'SALE ENTRY'}</div>
         </div>
 
         <div className="billing-header">
           <div className="billing-header-column">
             <div className="billing-field">
               <label>Bill No. :</label>
-              <strong>{session.billNumber}</strong>
+              <strong>{displaySession.billNumber}</strong>
             </div>
 
             <div className="billing-field">
@@ -827,6 +1227,7 @@ function Billing({
               <input
                 value={customerMobile}
                 onChange={(event) => handleCustomerMobileChange(event.target.value)}
+                readOnly={isReadOnly}
               />
             </div>
           </div>
@@ -843,6 +1244,7 @@ function Billing({
               <input
                 value={customerName}
                 onChange={(event) => handleCustomerNameChange(event.target.value)}
+                readOnly={isReadOnly}
               />
             </div>
           </div>
@@ -866,7 +1268,10 @@ function Billing({
                 const selected = index === selectedIndex
 
                 const isBottomBlank =
-                  index === lines.length - 1 && line.productId === null && !line.isTemporary
+                  !isReadOnly &&
+                  index === lines.length - 1 &&
+                  line.productId === null &&
+                  !line.isTemporary
 
                 return (
                   <tr
@@ -886,6 +1291,7 @@ function Billing({
                         <div className="product-entry">
                           <input
                             ref={barcodeInputRef}
+                            onFocus={() => setActiveField('product')}
                             value={barcodeInput}
                             onChange={(event) => handleBarcodeChange(event.target.value)}
                             onKeyDown={(event) => {
@@ -926,6 +1332,7 @@ function Billing({
                       {line.productId !== null || line.isTemporary ? (
                         selected && activeField === 'quantity' ? (
                           <input
+                            disabled={isReadOnly}
                             ref={quantityInputRef}
                             className="billing-number-input"
                             type="number"
@@ -953,6 +1360,7 @@ function Billing({
                       {line.productId !== null || line.isTemporary ? (
                         selected && activeField === 'free' ? (
                           <input
+                            disabled={isReadOnly}
                             ref={freeInputRef}
                             className="billing-number-input"
                             type="number"
@@ -980,6 +1388,7 @@ function Billing({
                       {line.productId !== null || line.isTemporary ? (
                         selected && activeField === 'rate' ? (
                           <input
+                            disabled={isReadOnly}
                             ref={rateInputRef}
                             className="billing-number-input"
                             type="text"
@@ -1055,18 +1464,70 @@ function Billing({
           </div>
         </div>
 
-        <div className="billing-footer">
-          <span>F2 Add Item</span>
-          <span>Enter Add</span>
-          <span>Delete Remove</span>
-          <span>F6 Payment</span>
-          <span>F8 Complete &amp; Print</span>
-          <span>Esc Back</span>
-          <span>Ctrl+N New Bill</span>
-          <span>Ctrl+P Reprint</span>
-        </div>
+        {isReadOnly ? (
+          <div className="billing-footer historical-billing-footer">
+            <span>↑↓ Select Row</span>
+
+            <button
+              type="button"
+              className={historicalActionIndex === 0 ? 'billing-action-selected' : ''}
+              onClick={() => {
+                setHistoricalActionIndex(0)
+                handleHistoricalAction('modify')
+              }}
+            >
+              MODIFY
+            </button>
+
+            <button
+              type="button"
+              className={historicalActionIndex === 1 ? 'billing-action-selected' : ''}
+              onClick={() => {
+                setHistoricalActionIndex(1)
+                handleHistoricalAction('print')
+              }}
+            >
+              PRINT
+            </button>
+
+            <button
+              type="button"
+              className={historicalActionIndex === 2 ? 'billing-action-selected' : ''}
+              onClick={() => {
+                setHistoricalActionIndex(2)
+                handleHistoricalAction('delete')
+              }}
+            >
+              DELETE
+            </button>
+
+            <span>←→ Actions</span>
+            <span>F3 Modify</span>
+            <span>Enter Action</span>
+            <span>Esc Back</span>
+          </div>
+        ) : mode === 'modify' ? (
+          <div className="billing-footer">
+            <span>F2 Add Item</span>
+            <span>Enter Add</span>
+            <span>Delete Remove</span>
+            <span>F6 Save</span>
+            <span>Esc Back</span>
+          </div>
+        ) : (
+          <div className="billing-footer">
+            <span>F2 Add Item</span>
+            <span>Enter Add</span>
+            <span>Delete Remove</span>
+            <span>F6 Payment</span>
+            <span>F9 Bill History</span>
+            <span>Esc Back</span>
+            <span>Ctrl+N New Bill</span>
+            <span>Ctrl+P Reprint</span>
+          </div>
+        )}
       </div>
-      {showPayment && (
+      {!isHistoricalBill && showPayment && (
         <Payment
           session={session}
           totalPaise={subtotalPaise}
@@ -1081,20 +1542,53 @@ function Billing({
         />
       )}
 
-      {showCompleteConfirmation && pendingPayment && (
+      {isHistoricalBill && !isReadOnly && showHistoricalPayment && historicalSession && (
+        <Payment
+          session={historicalSession}
+          totalPaise={
+            historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+            historicalOriginalTotalPaise
+          }
+          onBack={() => {
+            setShowHistoricalPayment(false)
+            setPendingHistoricalPayment(null)
+          }}
+          onComplete={(payment: PaymentResult) => {
+            if (payment.mode === 'mixed') {
+              setQuantityShortcutError('Mixed payment is not supported for bill modification')
+              return
+            }
+            setPendingHistoricalPayment(payment)
+            setShowHistoricalPayment(false)
+            void saveHistoricalBill({
+              type: 'charge',
+              method: payment.mode === 'upi' ? 'upi' : 'cash',
+              amountPaise: payment.paidPaise
+            })
+          }}
+        />
+      )}
+
+      {!isHistoricalBill && showCompleteConfirmation && pendingPayment && (
         <ConfirmDialog
           title="Complete Bill"
-          message={`Complete bill ${session.billNumber}?`}
+          message={`Complete bill ${displaySession.billNumber}?`}
           onConfirm={async () => {
+            if (isCompletingSale) {
+              return
+            }
+
             if (!pendingPayment) {
               return
             }
 
+            setIsCompletingSale(true)
+
             try {
               const result = await window.kirana.billing.completeSale({
-                billNumber: session.billNumber,
-                customerName: session.customerName,
-                customerMobile: session.customerMobile,
+                billNumber: displaySession.billNumber,
+                customerName: displaySession.customerName,
+                customerMobile: displaySession.customerMobile,
 
                 lines: lines.filter((line) => line.productId !== null || line.isTemporary),
 
@@ -1112,9 +1606,10 @@ function Billing({
               const message = error instanceof Error ? error.message : 'Failed to complete bill.'
 
               setShowCompleteConfirmation(false)
+              setIsCompletingSale(false)
               setPendingPayment(null)
-
-              alert(message)
+              setShowErrorDialog(true)
+              setErrorDialogMessage(message)
             }
           }}
           onCancel={() => {
@@ -1124,22 +1619,59 @@ function Billing({
         />
       )}
 
-      {showPrintConfirmation && (
+      {isHistoricalBill && !isReadOnly && showHistoricalRefundConfirmation && historicalSession && (
+        <ConfirmDialog
+          title="REFUND"
+          message={`Refund ₹${(
+            Math.abs(
+              historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+                historicalOriginalTotalPaise
+            ) / 100
+          ).toFixed(2)} to customer?`}
+          onConfirm={() => {
+            setShowHistoricalRefundConfirmation(false)
+
+            void saveHistoricalBill({
+              type: 'refund',
+              method: 'cash',
+              amountPaise: Math.abs(
+                historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+                  historicalOriginalTotalPaise
+              )
+            })
+          }}
+          onCancel={() => {
+            setShowHistoricalRefundConfirmation(false)
+          }}
+        />
+      )}
+
+      {!isHistoricalBill && showPrintConfirmation && (
         <ConfirmDialog
           title="Print Bill"
-          message={`Print bill ${session.billNumber}?`}
+          message={`Print bill ${displaySession.billNumber}?`}
           onConfirm={async () => {
             setShowPrintConfirmation(false)
             setPendingPayment(null)
 
             // Printer integration will be added later.
-            await onBillCompleted(session.billNumber)
+            await onBillCompleted(displaySession.billNumber)
           }}
           onCancel={async () => {
             setShowPrintConfirmation(false)
             setPendingPayment(null)
 
-            await onBillCompleted(session.billNumber)
+            await onBillCompleted(displaySession.billNumber)
+          }}
+        />
+      )}
+
+      {showErrorDialog && (
+        <ErrorDialog
+          message={errorDialogMessage}
+          onClose={() => {
+            setShowErrorDialog(false)
+            setErrorDialogMessage('')
           }}
         />
       )}

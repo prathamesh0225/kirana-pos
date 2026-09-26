@@ -454,3 +454,67 @@
 
   font-size: 12px;
 }
+
+/* =========================================================
+   Historical Bill Action Buttons
+   ========================================================= */
+
+.historical-billing-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.historical-billing-footer button {
+  min-width: 82px;
+  height: 28px;
+  padding: 0 14px;
+
+  border: 1px solid #777;
+  border-radius: 2px;
+
+  background: #e6e6e6;
+  color: #111;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-sizing: border-box;
+}
+
+/* Keyboard-selected button */
+.historical-billing-footer button.billing-action-selected {
+  background: #1f4e79;
+  color: #ffffff;
+
+  border: 2px solid #000;
+  outline: 2px solid #ffd400;
+  outline-offset: 1px;
+
+  font-weight: 800;
+}
+
+/* Mouse hover */
+.historical-billing-footer button:hover {
+  background: #d2d2d2;
+}
+
+/* Keep keyboard-selected appearance stronger than hover */
+.historical-billing-footer button.billing-action-selected:hover {
+  background: #1f4e79;
+  color: #ffffff;
+}
+
+/* Keyboard focus */
+.historical-billing-footer button:focus-visible {
+  outline: 2px solid #ffd400;
+  outline-offset: 2px;
+}
+
+/* Pressed state */
+.historical-billing-footer button:active {
+  transform: translateY(1px);
+}

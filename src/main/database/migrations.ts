@@ -231,6 +231,78 @@ const migrations: Migration[] = [
       bill_number TEXT NOT NULL
     );
   `
+  },
+  {
+    version: 7,
+    name: 'sale_returns',
+    sql: `
+    CREATE TABLE IF NOT EXISTS sale_returns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      return_date TEXT NOT NULL,
+      total_refund_paise INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'completed',
+      notes TEXT,
+      FOREIGN KEY (sale_id) REFERENCES sales(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sale_returns_sale_id
+      ON sale_returns(sale_id);
+
+    CREATE TABLE IF NOT EXISTS sale_return_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_return_id INTEGER NOT NULL,
+      sale_item_id INTEGER NOT NULL,
+      product_id INTEGER,
+      product_name TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 0,
+      free_quantity REAL NOT NULL DEFAULT 0,
+      rate_paise INTEGER NOT NULL DEFAULT 0,
+      refund_amount_paise INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (sale_return_id) REFERENCES sale_returns(id),
+      FOREIGN KEY (sale_item_id) REFERENCES sale_items(id),
+      FOREIGN KEY (product_id) REFERENCES products(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sale_return_items_return_id
+      ON sale_return_items(sale_return_id);
+
+    CREATE INDEX IF NOT EXISTS idx_sale_return_items_sale_item_id
+      ON sale_return_items(sale_item_id);
+
+    CREATE TABLE IF NOT EXISTS return_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_return_id INTEGER NOT NULL,
+      payment_method TEXT NOT NULL,
+      amount_paise INTEGER NOT NULL DEFAULT 0,
+      payment_date TEXT NOT NULL,
+      FOREIGN KEY (sale_return_id) REFERENCES sale_returns(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_return_payments_return_id
+      ON return_payments(sale_return_id);
+  `
+  },
+  {
+    version: 8,
+    name: 'sale_modifications',
+    sql: `
+    CREATE TABLE IF NOT EXISTS sale_modifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sale_id INTEGER NOT NULL,
+      original_total_paise INTEGER NOT NULL,
+      new_total_paise INTEGER NOT NULL,
+      adjustment_type TEXT NOT NULL,
+      payment_method TEXT NOT NULL,
+      adjustment_amount_paise INTEGER NOT NULL DEFAULT 0,
+      modification_date TEXT NOT NULL,
+      notes TEXT,
+      FOREIGN KEY (sale_id) REFERENCES sales(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sale_modifications_sale_id
+      ON sale_modifications(sale_id);
+  `
   }
 ]
 
