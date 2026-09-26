@@ -1,5 +1,38 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+type PrinterInfo = {
+  name: string
+  displayName: string
+  description: string
+}
+
+type EscPosReceiptLine = {
+  productName: string
+  mrpPaise: number
+  quantity: number
+  freeQuantity: number
+  ratePaise: number
+  amountPaise: number
+}
+
+type EscPosReceipt = {
+  billNumber: string
+  saleDate: string
+
+  customerName?: string
+  customerMobile?: string
+
+  lines: EscPosReceiptLine[]
+
+  totalMrpPaise: number
+  discountPaise: number
+  totalAmountPaise: number
+
+  paymentMethod?: 'cash' | 'upi' | 'mixed'
+  paidPaise?: number
+  changePaise?: number
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -164,6 +197,16 @@ declare global {
           totalPaise: number
           adjustmentPaise: number
         }>
+      }
+
+      printer: {
+        list: () => Promise<PrinterInfo[]>
+
+        test: (printerName: string) => Promise<void>
+
+        printReceipt: (printerName: string, receipt: EscPosReceipt) => Promise<void>
+
+        rawReceiptTest: (printerName: string) => Promise<void>
       }
     }
   }

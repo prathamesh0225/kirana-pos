@@ -99,6 +99,31 @@ function App(): React.JSX.Element {
     void loadBillingSlots()
   }, [])
 
+  useEffect(() => {
+    window.kirana.printer.list().then((printers) => {
+      console.log('INSTALLED PRINTERS:', printers)
+    })
+  }, [])
+
+  // useEffect(() => {
+  //   window.kirana.printer.list().then((printers) => {
+  //     console.log('INSTALLED PRINTERS:', printers)
+
+  //     const rugtek = printers.find((printer) => printer.name === '80mm Series Printer')
+
+  //     if (rugtek) {
+  //       window.kirana.printer
+  //         .test(rugtek.name)
+  //         .then(() => {
+  //           console.log('TEST PRINT SENT')
+  //         })
+  //         .catch((error) => {
+  //           console.error('TEST PRINT FAILED:', error)
+  //         })
+  //     }
+  //   })
+  // }, [])
+
   /*
    * Update only the currently active bill.
    */

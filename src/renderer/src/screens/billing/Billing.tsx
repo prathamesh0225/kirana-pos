@@ -1651,16 +1651,67 @@ function Billing({
           title="Print Bill"
           message={`Print bill ${displaySession.billNumber}?`}
           onConfirm={async () => {
-            setShowPrintConfirmation(false)
-            setPendingPayment(null)
+            try {
+              const printers = await window.kirana.printer.list()
 
-            // Printer integration will be added later.
-            await onBillCompleted(displaySession.billNumber)
+              const printer = printers.find((item) => item.name === '80mm Series Printer')
+
+              if (!printer) {
+                throw new Error('80mm Series Printer not found.')
+              }
+
+              const receipt = {
+                billNumber: displaySession.billNumber,
+                saleDate: new Date().toLocaleDateString('en-IN'),
+                customerName: displaySession.customerName || undefined,
+                customerMobile: displaySession.customerMobile || undefined,
+
+                lines: lines
+                  .filter((line) => line.productId !== null || line.isTemporary)
+                  .map((line) => ({
+                    productName: line.productName,
+                    mrpPaise: line.mrpPaise,
+                    quantity: line.quantity,
+                    freeQuantity: line.freeQuantity,
+                    ratePaise: line.ratePaise,
+                    amountPaise: line.amountPaise
+                  })),
+
+                totalMrpPaise: lines.reduce(
+                  (total, line) => total + Math.round(line.mrpPaise * line.quantity),
+                  0
+                ),
+
+                discountPaise: lines.reduce(
+                  (total, line) =>
+                    total + Math.round((line.mrpPaise - line.ratePaise) * line.quantity),
+                  0
+                ),
+
+                totalAmountPaise: lines.reduce((total, line) => total + line.amountPaise, 0),
+
+                paymentMethod: pendingPayment?.method,
+                paidPaise: pendingPayment?.paidPaise,
+                changePaise: pendingPayment?.changePaise
+              }
+
+              await window.kirana.printer.printReceipt(printer.name, receipt)
+            } catch (error) {
+              console.error('Failed to print bill:', error)
+
+              const message = error instanceof Error ? error.message : 'Failed to print bill.'
+
+              setShowErrorDialog(true)
+              setErrorDialogMessage(message)
+            } finally {
+              setShowPrintConfirmation(false)
+              setPendingPayment(null)
+              await onBillCompleted(displaySession.billNumber)
+            }
           }}
           onCancel={async () => {
             setShowPrintConfirmation(false)
             setPendingPayment(null)
-
             await onBillCompleted(displaySession.billNumber)
           }}
         />

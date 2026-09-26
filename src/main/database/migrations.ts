@@ -303,6 +303,24 @@ const migrations: Migration[] = [
     CREATE INDEX IF NOT EXISTS idx_sale_modifications_sale_id
       ON sale_modifications(sale_id);
   `
+  },
+  {
+    version: 9,
+    name: 'printer_settings',
+    sql: `
+    CREATE TABLE IF NOT EXISTS printer_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      printer_name TEXT
+    );
+
+    INSERT OR IGNORE INTO printer_settings (
+      id,
+      printer_name
+    ) VALUES (
+      1,
+      NULL
+    );
+  `
   }
 ]
 

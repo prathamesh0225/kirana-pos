@@ -93,6 +93,17 @@ const api = {
         amountPaise: number
       }
     }) => ipcRenderer.invoke('billing:updateSale', input)
+  },
+
+  printer: {
+    list: () => ipcRenderer.invoke('printer:list'),
+
+    test: (printerName: string) => ipcRenderer.invoke('printer:test', printerName),
+
+    printReceipt: (printerName: string, receipt: unknown) =>
+      ipcRenderer.invoke('printer:printReceipt', printerName, receipt),
+    rawReceiptTest: (printerName: string) =>
+      ipcRenderer.invoke('printer:rawReceiptTest', printerName)
   }
 }
 
