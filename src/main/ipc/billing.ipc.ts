@@ -1,7 +1,11 @@
 import { ipcMain } from 'electron'
 import { getDatabase } from '../database'
 import { allocateNextBillNumberForSlot, getBillingSlots } from '../repositories/bill.repository'
-import { completeSale, type CompleteSaleInput } from '../services/sale.service'
+import {
+  completeSale,
+  getDashboardSalesSummary,
+  type CompleteSaleInput
+} from '../services/sale.service'
 import { processSaleReturn, type ProcessSaleReturnInput } from '../services/return.service'
 import { listSales, getSaleById } from '../repositories/sale.repository'
 import { updateSale, type UpdateSaleInput } from '../services/sale-update.service'
@@ -35,6 +39,10 @@ export function registerBillingIpc(): void {
     return listSales(db, limit)
   })
 
+  ipcMain.handle('billing:getDashboardSalesSummary', () => {
+    return getDashboardSalesSummary()
+  })
+
   ipcMain.handle('billing:getSaleById', (_event, saleId: number) => {
     const db = getDatabase()
     return getSaleById(db, saleId)
@@ -42,5 +50,25 @@ export function registerBillingIpc(): void {
 
   ipcMain.handle('billing:updateSale', (_event, input: UpdateSaleInput) => {
     return updateSale(input)
+  })
+
+  ipcMain.handle('billing:repairCompletedSlot', () => {
+    const db = getDatabase()
+
+    const existingSale = db
+      .prepare(
+        `
+      SELECT bill_number
+      FROM sales
+      WHERE bill_number = 'A000030'
+    `
+      )
+      .get() as { bill_number: string } | undefined
+
+    if (!existingSale) {
+      throw new Error('A000030 was not found in completed sales')
+    }
+
+    return allocateNextBillNumberForSlot(db, 1)
   })
 }

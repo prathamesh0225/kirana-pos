@@ -27,16 +27,16 @@ function ConfirmDialog({
     confirmRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent): void {
-      event.stopPropagation()
-
       if (event.key === 'Enter') {
         event.preventDefault()
+        event.stopImmediatePropagation()
         onConfirm()
         return
       }
 
       if (event.key === 'Escape') {
         event.preventDefault()
+        event.stopImmediatePropagation()
         onCancel()
       }
     }

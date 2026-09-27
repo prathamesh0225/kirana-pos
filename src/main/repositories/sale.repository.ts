@@ -98,6 +98,39 @@ export function listSales(db: Database.Database, limit = 100): SaleListItem[] {
   }))
 }
 
+export type DashboardSalesSummary = {
+  totalSalesPaise: number
+  billsToday: number
+}
+
+export function getTodaySalesSummary(
+  db: Database.Database,
+  startOfDay: string,
+  startOfNextDay: string
+): DashboardSalesSummary {
+  const row = db
+    .prepare(
+      `
+      SELECT
+        COALESCE(SUM(total_paise), 0) AS total_sales_paise,
+        COUNT(*) AS bills_today
+      FROM sales
+      WHERE sale_date >= ?
+        AND sale_date < ?
+        AND status = 'completed'
+      `
+    )
+    .get(startOfDay, startOfNextDay) as {
+    total_sales_paise: number
+    bills_today: number
+  }
+
+  return {
+    totalSalesPaise: row.total_sales_paise,
+    billsToday: row.bills_today
+  }
+}
+
 export function getSaleById(db: Database.Database, saleId: number): SaleDetail | null {
   const sale = db
     .prepare(

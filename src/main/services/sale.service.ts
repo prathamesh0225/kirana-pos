@@ -1,4 +1,22 @@
 import { getDatabase } from '../database'
+import { getTodaySalesSummary } from '../repositories/sale.repository'
+
+export type TodaySalesSummary = {
+  totalSalesPaise: number
+  billsToday: number
+}
+
+export function getDashboardSalesSummary(): TodaySalesSummary {
+  const db = getDatabase()
+
+  const now = new Date()
+
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+
+  const startOfNextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0)
+
+  return getTodaySalesSummary(db, startOfDay.toISOString(), startOfNextDay.toISOString())
+}
 
 export type CompleteSaleLine = {
   productId: number | null

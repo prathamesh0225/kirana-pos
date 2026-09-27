@@ -70,6 +70,8 @@ const api = {
 
     listSales: (limit?: number) => ipcRenderer.invoke('billing:listSales', limit),
 
+    getDashboardSalesSummary: () => ipcRenderer.invoke('billing:getDashboardSalesSummary'),
+
     getSaleById: (saleId: number) => ipcRenderer.invoke('billing:getSaleById', saleId),
 
     updateSale: (input: {
@@ -92,7 +94,9 @@ const api = {
         method: 'cash' | 'upi'
         amountPaise: number
       }
-    }) => ipcRenderer.invoke('billing:updateSale', input)
+    }) => ipcRenderer.invoke('billing:updateSale', input),
+    //window.kirana.billing.repairCompletedSlot()
+    repairCompletedSlot: () => ipcRenderer.invoke('billing:repairCompletedSlot')
   },
 
   printer: {

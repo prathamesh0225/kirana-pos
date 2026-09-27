@@ -192,6 +192,62 @@ function Billing({
     return ['modify', 'print', 'delete'][historicalActionIndex] as HistoricalAction
   }
 
+  async function printHistoricalBill(): Promise<void> {
+    if (!historicalSession) {
+      return
+    }
+
+    try {
+      const printers = await window.kirana.printer.list()
+
+      const printer = printers.find((item) => item.name === '80mm Series Printer')
+
+      if (!printer) {
+        throw new Error('80mm Series Printer not found.')
+      }
+
+      const billLines = historicalSession.lines.filter(
+        (line) => line.productId !== null || line.isTemporary
+      )
+
+      const receipt = {
+        billNumber: historicalSession.billNumber,
+        saleDate: new Date().toLocaleDateString('en-IN'),
+        customerName: historicalSession.customerName || undefined,
+        customerMobile: historicalSession.customerMobile || undefined,
+
+        lines: billLines.map((line) => ({
+          productName: line.productName,
+          mrpPaise: line.mrpPaise,
+          quantity: line.quantity,
+          freeQuantity: line.freeQuantity,
+          ratePaise: line.ratePaise,
+          amountPaise: line.amountPaise
+        })),
+
+        totalMrpPaise: billLines.reduce(
+          (total, line) => total + Math.round(line.mrpPaise * line.quantity),
+          0
+        ),
+
+        discountPaise: billLines.reduce(
+          (total, line) => total + Math.round((line.mrpPaise - line.ratePaise) * line.quantity),
+          0
+        ),
+
+        totalAmountPaise: billLines.reduce((total, line) => total + line.amountPaise, 0)
+      }
+
+      await window.kirana.printer.printReceipt(printer.name, receipt)
+    } catch (error) {
+      console.error('Failed to print historical bill:', error)
+
+      setErrorDialogMessage(error instanceof Error ? error.message : 'Failed to print bill.')
+
+      setShowErrorDialog(true)
+    }
+  }
+
   function handleHistoricalAction(action: HistoricalAction): void {
     if (action === 'modify') {
       onModifyMode?.()
@@ -199,7 +255,7 @@ function Billing({
     }
 
     if (action === 'print') {
-      window.print()
+      void printHistoricalBill()
       return
     }
 
@@ -326,10 +382,17 @@ function Billing({
    */
 
   useEffect(() => {
-    if (showItemSelector) {
+    if (
+      showItemSelector ||
+      showPayment ||
+      showCompleteConfirmation ||
+      showPrintConfirmation ||
+      showErrorDialog ||
+      showHistoricalPayment ||
+      showHistoricalRefundConfirmation
+    ) {
       return
     }
-
     function validateBillBeforePayment(): string | null {
       const billLines = lines.filter((line) => line.productId !== null || line.isTemporary)
 
@@ -385,6 +448,12 @@ function Billing({
         if (event.key === 'F3' && isReadOnly) {
           event.preventDefault()
           onModifyMode?.()
+          return
+        }
+
+        if (event.key === 'F7' && isReadOnly) {
+          event.preventDefault()
+          void printHistoricalBill()
           return
         }
 
@@ -529,7 +598,7 @@ function Billing({
         return
       }
 
-      if (event.key === 'Escape') {
+      if (event.key === 'F1') {
         event.preventDefault()
 
         if (barcodeNotFound) {
@@ -565,6 +634,7 @@ function Billing({
     activeField,
     barcodeNotFound,
     isHistoricalBill,
+    historicalActionIndex,
     isReadOnly,
     lines,
     onBack,

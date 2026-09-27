@@ -3,27 +3,37 @@ import Billing from './screens/billing/Billing'
 import ItemMaster from './screens/products/ItemMaster'
 import ProductForm from './screens/products/ProductForm'
 import BillHistory from './screens/billing/BillHistory'
+import { Dashboard } from './screens/dashboard/Dashboard'
+import { AppShell } from './components/app-shell/AppShell'
 import type { BillingSession } from './screens/billing/billing.types'
+import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
 
 type HistoricalBillMode = 'view' | 'modify'
 
 type Screen =
   | {
+      type: 'dashboard'
+    }
+  | {
       type: 'billing'
     }
   | {
       type: 'item-master'
+      returnTo: 'dashboard' | 'billing'
     }
   | {
       type: 'add-item'
       initialBarcode?: string
+      returnTo: 'dashboard' | 'billing'
     }
   | {
       type: 'edit-item'
       productId: number
+      returnTo: 'dashboard' | 'billing'
     }
   | {
       type: 'bill-history'
+      returnTo: 'dashboard' | 'billing'
     }
   | {
       type: 'historical-bill'
@@ -59,7 +69,7 @@ function createNewBillingSession(billNumber: string): BillingSession {
 
 function App(): React.JSX.Element {
   const [screen, setScreen] = useState<Screen>({
-    type: 'billing'
+    type: 'dashboard'
   })
 
   /*
@@ -83,6 +93,8 @@ function App(): React.JSX.Element {
     null
   )
 
+  const [showExitBillingConfirm, setShowExitBillingConfirm] = useState(false)
+
   /*
    * Load the two persistent billing slots.
    */
@@ -98,31 +110,6 @@ function App(): React.JSX.Element {
 
     void loadBillingSlots()
   }, [])
-
-  useEffect(() => {
-    window.kirana.printer.list().then((printers) => {
-      console.log('INSTALLED PRINTERS:', printers)
-    })
-  }, [])
-
-  // useEffect(() => {
-  //   window.kirana.printer.list().then((printers) => {
-  //     console.log('INSTALLED PRINTERS:', printers)
-
-  //     const rugtek = printers.find((printer) => printer.name === '80mm Series Printer')
-
-  //     if (rugtek) {
-  //       window.kirana.printer
-  //         .test(rugtek.name)
-  //         .then(() => {
-  //           console.log('TEST PRINT SENT')
-  //         })
-  //         .catch((error) => {
-  //           console.error('TEST PRINT FAILED:', error)
-  //         })
-  //     }
-  //   })
-  // }, [])
 
   /*
    * Update only the currently active bill.
@@ -149,6 +136,31 @@ function App(): React.JSX.Element {
     })
   }
 
+  function clearActiveBillingSession(): void {
+    setBillingSessions((currentSessions) => {
+      if (!currentSessions) {
+        return currentSessions
+      }
+
+      const updatedSessions: [BillingSession, BillingSession] = [...currentSessions] as [
+        BillingSession,
+        BillingSession
+      ]
+
+      const currentSession = currentSessions[activeBillingIndex]
+
+      updatedSessions[activeBillingIndex] = {
+        ...currentSession,
+        id: crypto.randomUUID(),
+        lines: [createEmptyBillingLine()],
+        customerName: '',
+        customerMobile: ''
+      }
+
+      return updatedSessions
+    })
+  }
+
   /*
    * Ctrl+N switches between the two active billing slots.
    */
@@ -156,12 +168,40 @@ function App(): React.JSX.Element {
     setActiveBillingIndex((currentIndex) => (currentIndex === 0 ? 1 : 0))
   }
 
+  function handleMenuSelect(menu: string): void {
+    switch (menu) {
+      case 'dashboard':
+        setScreen({ type: 'dashboard' })
+        break
+
+      case 'billing':
+        setScreen({ type: 'billing' })
+        break
+
+      case 'history':
+        setScreen({
+          type: 'bill-history',
+          returnTo: 'dashboard'
+        })
+        break
+
+      case 'items':
+        setScreen({ type: 'item-master', returnTo: 'dashboard' })
+        break
+
+      default:
+        console.log(`Menu "${menu}" is not implemented yet.`)
+        break
+    }
+  }
+
   /*
    * Open Bill History.
    */
   function handleOpenBillHistory(): void {
     setScreen({
-      type: 'bill-history'
+      type: 'bill-history',
+      returnTo: 'billing'
     })
   }
 
@@ -205,7 +245,8 @@ function App(): React.JSX.Element {
     setHistoricalBillingSession(null)
 
     setScreen({
-      type: 'bill-history'
+      type: 'bill-history',
+      returnTo: 'dashboard'
     })
   }
 
@@ -220,38 +261,104 @@ function App(): React.JSX.Element {
 
   /*
    * =========================================================
+   * DASHBOARD
+   * =========================================================
+   */
+  if (screen.type === 'dashboard') {
+    return (
+      <AppShell activeMenu="dashboard" onMenuSelect={handleMenuSelect}>
+        <Dashboard
+          onOpenBilling={() => {
+            setScreen({
+              type: 'billing'
+            })
+          }}
+          onOpenItems={() => {
+            setScreen({
+              type: 'item-master',
+              returnTo: 'dashboard'
+            })
+          }}
+        />
+      </AppShell>
+    )
+  }
+
+  /*
+   * =========================================================
    * ACTIVE BILLING
    * =========================================================
    */
   if (screen.type === 'billing') {
     return (
-      <Billing
-        session={activeBillingSession!}
-        onSessionChange={updateActiveBillingSession}
-        mode="active"
-        onNewBill={handleNewBill}
-        onBillCompleted={async () => {
-          const newBillNumber =
-            await window.kirana.billing.allocateNextBillNumber(activeBillingIndex)
+      <>
+        <Billing
+          session={activeBillingSession!}
+          onSessionChange={updateActiveBillingSession}
+          mode="active"
+          onNewBill={handleNewBill}
+          onBillCompleted={async () => {
+            const newBillNumber =
+              await window.kirana.billing.allocateNextBillNumber(activeBillingIndex)
 
-          updateActiveBillingSession(createNewBillingSession(newBillNumber))
-        }}
-        onBack={() => {
-          // Existing navigation.
-        }}
-        onAddItem={() => {
-          setScreen({
-            type: 'add-item'
-          })
-        }}
-        onEditItem={(productId) => {
-          setScreen({
-            type: 'edit-item',
-            productId
-          })
-        }}
-        onOpenBillHistory={handleOpenBillHistory}
-      />
+            setBillingSessions((currentSessions) => {
+              if (!currentSessions) {
+                return currentSessions
+              }
+
+              const updatedSessions: [BillingSession, BillingSession] = [...currentSessions]
+
+              updatedSessions[activeBillingIndex] = createNewBillingSession(newBillNumber)
+
+              return updatedSessions
+            })
+          }}
+          onBack={() => {
+            const hasItems = activeBillingSession?.lines.some(
+              (line) => line.productId !== null || line.isTemporary
+            )
+
+            if (!hasItems) {
+              setScreen({
+                type: 'dashboard'
+              })
+              return
+            }
+
+            setShowExitBillingConfirm(true)
+          }}
+          onAddItem={() => {
+            setScreen({
+              type: 'add-item',
+              returnTo: 'billing'
+            })
+          }}
+          onEditItem={(productId) => {
+            setScreen({
+              type: 'edit-item',
+              productId,
+              returnTo: 'billing'
+            })
+          }}
+          onOpenBillHistory={handleOpenBillHistory}
+        />
+        {showExitBillingConfirm && (
+          <ConfirmDialog
+            title="Leave Billing?"
+            message="Current bill will be cleared. Do you want to continue?"
+            onConfirm={() => {
+              clearActiveBillingSession()
+              setShowExitBillingConfirm(false)
+              setScreen({
+                type: 'dashboard'
+              })
+            }}
+            onCancel={() => {
+              setShowExitBillingConfirm(false)
+            }}
+          />
+        )}
+      </>
     )
   }
 
@@ -268,7 +375,7 @@ function App(): React.JSX.Element {
       <BillHistory
         onBack={() => {
           setScreen({
-            type: 'billing'
+            type: screen.returnTo
           })
         }}
         onOpenBill={(saleId) => {
@@ -377,18 +484,15 @@ function App(): React.JSX.Element {
       <ProductForm
         initialBarcode={screen.initialBarcode}
         onSaved={() => {
-          /*
-           * Return to the active bill.
-           *
-           * Active billingSessions were never lost.
-           */
           setScreen({
-            type: 'billing'
+            type: 'item-master',
+            returnTo: screen.returnTo
           })
         }}
         onCancel={() => {
           setScreen({
-            type: 'billing'
+            type: 'item-master',
+            returnTo: screen.returnTo
           })
         }}
       />
@@ -405,22 +509,20 @@ function App(): React.JSX.Element {
       <ProductForm
         productId={screen.productId}
         onSaved={() => {
-          /*
-           * Return to the active bill.
-           */
           setScreen({
-            type: 'billing'
+            type: 'item-master',
+            returnTo: screen.returnTo
           })
         }}
         onCancel={() => {
           setScreen({
-            type: 'billing'
+            type: 'item-master',
+            returnTo: screen.returnTo
           })
         }}
       />
     )
   }
-
   /*
    * =========================================================
    * ITEM MASTER
@@ -431,18 +533,20 @@ function App(): React.JSX.Element {
       mode="manage"
       onBack={() => {
         setScreen({
-          type: 'billing'
+          type: screen.returnTo
         })
       }}
       onAddItem={() => {
         setScreen({
-          type: 'add-item'
+          type: 'add-item',
+          returnTo: screen.returnTo
         })
       }}
       onEditItem={(productId) => {
         setScreen({
           type: 'edit-item',
-          productId
+          productId,
+          returnTo: screen.returnTo
         })
       }}
     />

@@ -137,6 +137,11 @@ declare global {
           }>
         >
 
+        getDashboardSalesSummary: () => Promise<{
+          totalSalesPaise: number
+          billsToday: number
+        }>
+
         getSaleById: (saleId: number) => Promise<{
           id: number
           billNumber: string
@@ -197,6 +202,8 @@ declare global {
           totalPaise: number
           adjustmentPaise: number
         }>
+        
+        repairCompletedSlot: () => Promise<string>
       }
 
       printer: {
