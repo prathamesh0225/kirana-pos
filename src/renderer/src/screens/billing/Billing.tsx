@@ -1667,6 +1667,7 @@ function Billing({
 
               setShowCompleteConfirmation(false)
               setShowPayment(false)
+              setIsCompletingSale(false)
               setShowPrintConfirmation(true)
             } catch (error) {
               console.error('Failed to complete sale:', error)

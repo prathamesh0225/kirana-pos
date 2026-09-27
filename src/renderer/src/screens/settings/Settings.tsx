@@ -100,6 +100,23 @@ export function Settings({ onBack }: SettingsProps) {
     }
   }
 
+  async function handleBackup() {
+    setMessage('Creating database backup...')
+
+    try {
+      const result = await window.kirana.database.backup()
+
+      if (result.cancelled) {
+        setMessage('Backup cancelled')
+        return
+      }
+
+      setMessage(`Backup created successfully: ${result.path}`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Database backup failed')
+    }
+  }
+
   const selectedPrinterExists = printers.some((printer) => printer.name === selectedPrinter)
 
   if (isLoading) {
@@ -154,6 +171,16 @@ export function Settings({ onBack }: SettingsProps) {
 
           <button type="button" onClick={() => void handleTestPrint()} disabled={!selectedPrinter}>
             TEST PRINT
+          </button>
+        </div>
+
+        <div className="settings-section-title">DATABASE</div>
+
+        <div className="settings-row">
+          <label>Database Backup</label>
+
+          <button type="button" onClick={() => void handleBackup()}>
+            BACKUP DATABASE
           </button>
         </div>
 

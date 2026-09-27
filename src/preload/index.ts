@@ -8,7 +8,9 @@ const api = {
   },
 
   database: {
-    test: () => ipcRenderer.invoke('database:test')
+    test: () => ipcRenderer.invoke('database:test'),
+
+    backup: () => ipcRenderer.invoke('database:backup')
   },
 
   products: {

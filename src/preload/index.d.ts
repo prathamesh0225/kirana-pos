@@ -48,6 +48,12 @@ declare global {
 
       database: {
         test: () => Promise<unknown>
+
+        backup: () => Promise<{
+          success: boolean
+          cancelled?: boolean
+          path?: string
+        }>
       }
 
       products: {
