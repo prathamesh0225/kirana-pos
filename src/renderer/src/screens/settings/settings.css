@@ -1,0 +1,99 @@
+.settings-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f4f4f4;
+  color: #111;
+  font-family: Arial, sans-serif;
+}
+
+.settings-title {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 1px solid #999;
+  background: #ddd;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-panel {
+  width: 700px;
+  margin: 24px;
+  border: 1px solid #999;
+  background: #fff;
+}
+
+.settings-section-title {
+  padding: 8px 10px;
+  border-bottom: 1px solid #aaa;
+  background: #e5e5e5;
+  font-weight: 700;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.settings-row label {
+  width: 180px;
+  font-weight: 600;
+}
+
+.settings-row select {
+  width: 420px;
+  height: 32px;
+  padding: 3px 6px;
+  font-size: 14px;
+}
+
+.settings-current {
+  padding: 12px;
+  font-size: 13px;
+}
+
+.settings-warning {
+  margin: 10px 12px;
+  padding: 8px;
+  border: 1px solid #999;
+  background: #eee;
+  font-weight: 600;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #ddd;
+}
+
+.settings-actions button {
+  min-width: 110px;
+  height: 32px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.settings-message {
+  padding: 0 12px 12px;
+  font-size: 13px;
+}
+
+.settings-loading {
+  padding: 24px;
+}
+
+.settings-footer {
+  margin-top: auto;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-top: 1px solid #999;
+  background: #ddd;
+  font-size: 12px;
+}

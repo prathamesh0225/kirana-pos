@@ -9,9 +9,11 @@ type DashboardSalesSummary = {
 type DashboardProps = {
   onOpenBilling: () => void
   onOpenItems: () => void
+  onOpenBillHistory: () => void
+  onOpenSettings: () => void
 }
 
-export function Dashboard({ onOpenBilling, onOpenItems }: DashboardProps) {
+export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory, onOpenSettings }: DashboardProps) {
   const [salesSummary, setSalesSummary] = useState<DashboardSalesSummary>({
     totalSalesPaise: 0,
     billsToday: 0
@@ -44,6 +46,34 @@ export function Dashboard({ onOpenBilling, onOpenItems }: DashboardProps) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'F1') {
+        event.preventDefault()
+        onOpenBilling()
+        return
+      }
+
+      if (event.key === 'F3') {
+        event.preventDefault()
+        onOpenItems()
+        return
+      }
+
+      if (event.key === 'F2') {
+        event.preventDefault()
+        onOpenBillHistory()
+        return
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onOpenBilling, onOpenItems, onOpenBillHistory])
 
   return (
     <div className="dashboard">
@@ -123,6 +153,11 @@ export function Dashboard({ onOpenBilling, onOpenItems }: DashboardProps) {
           <button type="button" onClick={onOpenItems}>
             <strong>Add Item</strong>
             <span>Create a new product</span>
+          </button>
+
+          <button type="button" onClick={onOpenBillHistory}>
+            <strong>Bill History</strong>
+            <span>View completed bills</span>
           </button>
         </div>
       </section>

@@ -202,7 +202,7 @@ declare global {
           totalPaise: number
           adjustmentPaise: number
         }>
-        
+
         repairCompletedSlot: () => Promise<string>
       }
 
@@ -214,6 +214,16 @@ declare global {
         printReceipt: (printerName: string, receipt: EscPosReceipt) => Promise<void>
 
         rawReceiptTest: (printerName: string) => Promise<void>
+      }
+
+      settings: {
+        getPrinter: () => Promise<{
+          printerName: string | null
+        }>
+
+        setPrinter: (printerName: string | null) => Promise<{
+          printerName: string | null
+        }>
       }
     }
   }

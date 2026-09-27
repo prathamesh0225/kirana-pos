@@ -108,6 +108,13 @@ const api = {
       ipcRenderer.invoke('printer:printReceipt', printerName, receipt),
     rawReceiptTest: (printerName: string) =>
       ipcRenderer.invoke('printer:rawReceiptTest', printerName)
+  },
+
+  settings: {
+    getPrinter: () => ipcRenderer.invoke('settings:getPrinter'),
+
+    setPrinter: (printerName: string | null) =>
+      ipcRenderer.invoke('settings:setPrinter', printerName)
   }
 }
 

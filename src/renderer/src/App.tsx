@@ -7,6 +7,7 @@ import { Dashboard } from './screens/dashboard/Dashboard'
 import { AppShell } from './components/app-shell/AppShell'
 import type { BillingSession } from './screens/billing/billing.types'
 import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
+import { Settings } from './screens/settings/Settings'
 
 type HistoricalBillMode = 'view' | 'modify'
 
@@ -16,6 +17,9 @@ type Screen =
     }
   | {
       type: 'billing'
+    }
+  | {
+      type: 'settings'
     }
   | {
       type: 'item-master'
@@ -189,6 +193,12 @@ function App(): React.JSX.Element {
         setScreen({ type: 'item-master', returnTo: 'dashboard' })
         break
 
+      case 'settings':
+        setScreen({
+          type: 'settings'
+        })
+        break
+
       default:
         console.log(`Menu "${menu}" is not implemented yet.`)
         break
@@ -277,6 +287,17 @@ function App(): React.JSX.Element {
             setScreen({
               type: 'item-master',
               returnTo: 'dashboard'
+            })
+          }}
+          onOpenBillHistory={() =>
+            setScreen({
+              type: 'bill-history',
+              returnTo: 'dashboard'
+            })
+          }
+          onOpenSettings={() => {
+            setScreen({
+              type: 'settings'
             })
           }}
         />
@@ -518,6 +539,24 @@ function App(): React.JSX.Element {
           setScreen({
             type: 'item-master',
             returnTo: screen.returnTo
+          })
+        }}
+      />
+    )
+  }
+
+  /*
+   * =========================================================
+   * SETTINGS
+   * =========================================================
+   */
+
+  if (screen.type === 'settings') {
+    return (
+      <Settings
+        onBack={() => {
+          setScreen({
+            type: 'dashboard'
           })
         }}
       />

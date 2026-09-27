@@ -198,12 +198,11 @@ function Billing({
     }
 
     try {
-      const printers = await window.kirana.printer.list()
+      const printerSettings = await window.kirana.settings.getPrinter()
+      const printerName = printerSettings.printerName?.trim()
 
-      const printer = printers.find((item) => item.name === '80mm Series Printer')
-
-      if (!printer) {
-        throw new Error('80mm Series Printer not found.')
+      if (!printerName) {
+        throw new Error('No printer is configured. Set the printer in Settings.')
       }
 
       const billLines = historicalSession.lines.filter(
@@ -238,7 +237,7 @@ function Billing({
         totalAmountPaise: billLines.reduce((total, line) => total + line.amountPaise, 0)
       }
 
-      await window.kirana.printer.printReceipt(printer.name, receipt)
+      await window.kirana.printer.printReceipt(printerName, receipt)
     } catch (error) {
       console.error('Failed to print historical bill:', error)
 
@@ -634,7 +633,6 @@ function Billing({
     activeField,
     barcodeNotFound,
     isHistoricalBill,
-    historicalActionIndex,
     isReadOnly,
     lines,
     onBack,
@@ -1722,12 +1720,11 @@ function Billing({
           message={`Print bill ${displaySession.billNumber}?`}
           onConfirm={async () => {
             try {
-              const printers = await window.kirana.printer.list()
+              const printerSettings = await window.kirana.settings.getPrinter()
+              const printerName = printerSettings.printerName?.trim()
 
-              const printer = printers.find((item) => item.name === '80mm Series Printer')
-
-              if (!printer) {
-                throw new Error('80mm Series Printer not found.')
+              if (!printerName) {
+                throw new Error('No printer is configured. Set the printer in Settings.')
               }
 
               const receipt = {
@@ -1765,7 +1762,7 @@ function Billing({
                 changePaise: pendingPayment?.changePaise
               }
 
-              await window.kirana.printer.printReceipt(printer.name, receipt)
+              await window.kirana.printer.printReceipt(printerName, receipt)
             } catch (error) {
               console.error('Failed to print bill:', error)
 

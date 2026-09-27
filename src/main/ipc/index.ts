@@ -3,6 +3,7 @@ import { registerDatabaseIpc } from './database.ipc'
 import { registerProductIpc } from './products.ipc'
 import { registerBillingIpc } from './billing.ipc'
 import { registerPrinterIpc } from './printer.ipc'
+import { registerSettingsIpc } from './settings.ipc'
 
 export function registerIpcHandlers(): void {
   registerAppIpc()
@@ -10,4 +11,5 @@ export function registerIpcHandlers(): void {
   registerProductIpc()
   registerBillingIpc()
   registerPrinterIpc()
+  registerSettingsIpc()
 }

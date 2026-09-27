@@ -12,9 +12,9 @@ const menuGroups = [
     title: 'MAIN',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: '▣' },
-      { id: 'billing', label: 'Billing', icon: '▤' },
-      { id: 'history', label: 'Bill History', icon: '▥' },
-      { id: 'items', label: 'Items', icon: '□' },
+      { id: 'billing', label: 'Billing F1', icon: '▤' },
+      { id: 'history', label: 'Bill History F2', icon: '▥' },
+      { id: 'items', label: 'Items F3', icon: '□' },
       { id: 'returns', label: 'Returns', icon: '↩' }
     ]
   },
