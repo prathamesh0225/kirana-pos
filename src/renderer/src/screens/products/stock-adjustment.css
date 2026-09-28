@@ -1,0 +1,122 @@
+.stock-adjustment {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.stock-adjustment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ccc;
+}
+
+.stock-adjustment-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.stock-adjustment-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #666;
+}
+
+.stock-adjustment-shortcuts {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.stock-adjustment-body {
+  padding: 20px;
+}
+
+.stock-adjustment-info {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stock-adjustment-info div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stock-adjustment-info span {
+  font-size: 12px;
+  color: #666;
+}
+
+.stock-adjustment-info strong {
+  font-size: 15px;
+}
+
+.stock-adjustment-fields {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  max-width: 800px;
+}
+
+.stock-adjustment-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stock-adjustment-fields label span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stock-adjustment-fields input {
+  height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #999;
+  font-size: 14px;
+}
+
+.stock-adjustment-result {
+  margin-top: 24px;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  width: 300px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stock-adjustment-result span {
+  font-size: 12px;
+  color: #666;
+}
+
+.stock-adjustment-result strong {
+  font-size: 16px;
+}
+
+.stock-adjustment-error {
+  margin-top: 16px;
+  color: #b00020;
+  font-size: 13px;
+}
+
+.stock-adjustment-footer {
+  margin-top: auto;
+  padding: 10px 16px;
+  border-top: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.stock-adjustment-footer button {
+  min-width: 80px;
+  padding: 6px 12px;
+}

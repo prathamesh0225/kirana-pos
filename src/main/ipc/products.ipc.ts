@@ -9,8 +9,11 @@ import {
   removeProduct,
   restoreProduct,
   searchProductCatalog,
-  getProductByIdAnyStatus
+  getProductByIdAnyStatus,
+  adjustStock
 } from '../services/product.service'
+
+import { getStockHistory } from '../services/stock.service'
 
 export function registerProductIpc(): void {
   ipcMain.handle('products:getByBarcode', (_, barcode: string) => {
@@ -59,4 +62,14 @@ export function registerProductIpc(): void {
   ipcMain.handle('products:getByIdAnyStatus', (_, productId: number) => {
     return getProductByIdAnyStatus(productId)
   })
+
+  ipcMain.handle('products:adjustStock', (_, productId: number, data) => {
+    return adjustStock(productId, data)
+  })
+
+  ipcMain.handle(
+    'products:getStockHistory',
+    (_event, productId: number, fromDate?: string | null, toDate?: string | null) =>
+      getStockHistory(productId, fromDate, toDate)
+  )
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, ReactElement } from 'react'
 import './app-shell.css'
 
 type AppShellProps = {
@@ -42,7 +42,7 @@ const menuGroups = [
   }
 ]
 
-export function AppShell({ activeMenu, onMenuSelect, children }: AppShellProps) {
+export function AppShell({ activeMenu, onMenuSelect, children }: AppShellProps): ReactElement {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">

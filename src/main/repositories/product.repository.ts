@@ -277,3 +277,65 @@ export function enableProduct(productId: number, now: string): void {
   `
   ).run(now, productId)
 }
+
+export function adjustProductStock(
+  productId: number,
+  quantity: number,
+  reason: string,
+  now: string
+): ProductRecord {
+  const db = getDatabase()
+
+  return db.transaction(() => {
+    const product = findProductByIdAnyStatus(productId)
+
+    if (!product) {
+      throw new Error('Product not found')
+    }
+
+    const newStock = product.stock_quantity + quantity
+
+    if (newStock < 0) {
+      throw new Error('Stock cannot become negative')
+    }
+
+    db.prepare(
+      `
+      UPDATE products
+      SET
+        stock_quantity = ?,
+        updated_at = ?
+      WHERE id = ?
+      `
+    ).run(newStock, now, productId)
+
+    /*
+     * Stock movement quantity is signed:
+     *
+     * +3 = stock added
+     * -2 = stock removed
+     */
+    db.prepare(
+      `
+  INSERT INTO stock_movements (
+    product_id,
+    movement_type,
+    quantity,
+    reference_type,
+    reference_id,
+    movement_date,
+    reason
+  )
+  VALUES (?, 'ADJUSTMENT', ?, 'MANUAL_ADJUSTMENT', NULL, ?, ?)
+  `
+    ).run(productId, quantity, now, reason)
+
+    const updatedProduct = findProductByIdAnyStatus(productId)
+
+    if (!updatedProduct) {
+      throw new Error('Product was adjusted but could not be loaded')
+    }
+
+    return updatedProduct
+  })()
+}

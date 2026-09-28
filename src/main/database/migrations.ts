@@ -321,6 +321,14 @@ const migrations: Migration[] = [
       NULL
     );
   `
+  },
+  {
+    version: 10,
+    name: 'stock_adjustment_reason',
+    sql: `
+    ALTER TABLE stock_movements
+ADD COLUMN reason TEXT;
+    `
   }
 ]
 

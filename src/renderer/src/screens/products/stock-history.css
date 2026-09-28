@@ -1,0 +1,395 @@
+/* =========================================================
+   STOCK HISTORY - MODERN DESKTOP UI
+   ========================================================= */
+
+.stock-history-screen {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background: #f4f6f8;
+  color: #1f2937;
+
+  font-family:
+    "Segoe UI",
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  font-size: 13px;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.stock-history-header {
+  flex: 0 0 auto;
+
+  padding: 18px 20px 16px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  box-sizing: border-box;
+}
+
+.stock-history-title {
+  margin-bottom: 14px;
+
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+
+  letter-spacing: -0.3px;
+
+  color: #111827;
+}
+
+.stock-history-product {
+  margin-bottom: 9px;
+
+  font-size: 15px;
+  line-height: 1.4;
+
+  color: #374151;
+}
+
+.stock-history-product strong {
+  color: #111827;
+  font-weight: 650;
+}
+
+.stock-history-meta {
+  display: inline-block;
+
+  margin-right: 28px;
+  margin-top: 4px;
+
+  font-size: 13px;
+  line-height: 1.5;
+
+  color: #6b7280;
+}
+
+.stock-history-meta strong {
+  color: #374151;
+  font-weight: 600;
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.stock-history-error {
+  flex: 0 0 auto;
+
+  margin: 10px 16px 0;
+  padding: 9px 12px;
+
+  background: #fef2f2;
+
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+
+  color: #b91c1c;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   TABLE CARD
+   ========================================================= */
+
+.stock-history-table {
+  flex: 1 1 auto;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  margin: 16px;
+
+  margin-bottom: 10px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04);
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   TABLE HEADER
+   ========================================================= */
+
+.stock-history-head {
+  flex: 0 0 38px;
+
+  background: #f8fafc;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  color: #6b7280;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+/* =========================================================
+   DATA BODY
+   ========================================================= */
+
+.stock-history-body {
+  flex: 1 1 auto;
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: #ffffff;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.stock-history-body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* =========================================================
+   ROW
+   ========================================================= */
+
+.stock-history-row {
+  display: grid;
+
+  grid-template-columns:
+    190px
+    120px
+    120px
+    minmax(200px, 1fr);
+
+  min-height: 38px;
+
+  align-items: center;
+
+  box-sizing: border-box;
+
+  border-bottom: 1px solid #f0f1f3;
+
+  background: #ffffff;
+
+  color: #374151;
+
+  user-select: none;
+
+  transition: none;
+}
+
+.stock-history-body
+.stock-history-row:last-child {
+  border-bottom: none;
+}
+
+/* =========================================================
+   CELLS
+   ========================================================= */
+
+.stock-history-row > div {
+  min-width: 0;
+
+  padding: 8px 12px;
+
+  box-sizing: border-box;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stock-history-head > div {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.stock-history-body
+.stock-history-row > div:first-child {
+  color: #4b5563;
+
+  font-variant-numeric: tabular-nums;
+}
+
+/* =========================================================
+   MOVEMENT TYPE
+   ========================================================= */
+
+.stock-history-body
+.stock-history-row > div:nth-child(2) {
+  font-weight: 600;
+}
+
+/* =========================================================
+   QUANTITY
+   ========================================================= */
+
+.stock-history-qty {
+  text-align: right;
+
+  font-variant-numeric: tabular-nums;
+
+  font-weight: 600;
+}
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.stock-history-body
+.stock-history-row:hover {
+  background: #f8fafc;
+}
+
+/* =========================================================
+   SELECTED ROW
+   ========================================================= */
+
+.stock-history-selected {
+  background: #eff6ff !important;
+
+  color: #1e40af;
+
+  outline: 1px solid #bfdbfe;
+  outline-offset: -1px;
+}
+
+.stock-history-selected > div {
+  font-weight: 600;
+}
+
+.stock-history-selected
+.stock-history-qty {
+  color: #1d4ed8;
+}
+
+/* =========================================================
+   LEFT SELECTION INDICATOR
+   ========================================================= */
+
+.stock-history-selected::before {
+  content: "";
+
+  position: absolute;
+
+  width: 3px;
+  height: 38px;
+
+  background: #2563eb;
+
+  border-radius: 0 2px 2px 0;
+}
+
+/*
+ * Rows need a positioning context for the
+ * selection indicator.
+ */
+.stock-history-body
+.stock-history-row {
+  position: relative;
+}
+
+/* =========================================================
+   EMPTY / LOADING
+   ========================================================= */
+
+.stock-history-empty {
+  padding: 32px 16px;
+
+  text-align: center;
+
+  color: #9ca3af;
+
+  font-size: 13px;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.stock-history-footer {
+  flex: 0 0 auto;
+
+  display: flex;
+  align-items: center;
+
+  min-height: 38px;
+
+  margin: 0 16px 10px;
+
+  padding: 0 4px;
+
+  box-sizing: border-box;
+
+  color: #6b7280;
+
+  font-size: 12px;
+}
+
+.stock-history-footer span {
+  margin-right: 26px;
+
+  white-space: nowrap;
+}
+
+.stock-history-footer span:last-child {
+  margin-right: 0;
+}
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
+
+.stock-history-screen:focus {
+  outline: none;
+}
+
+/* =========================================================
+   SMALLER WINDOW
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .stock-history-row {
+    grid-template-columns:
+      170px
+      100px
+      100px
+      minmax(150px, 1fr);
+  }
+
+  .stock-history-header {
+    padding: 14px 16px;
+  }
+
+  .stock-history-title {
+    font-size: 20px;
+  }
+}

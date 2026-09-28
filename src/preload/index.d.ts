@@ -33,6 +33,18 @@ type EscPosReceipt = {
   changePaise?: number
 }
 
+type StockMovementRecord = {
+  id: number
+  productId: number
+  movementType: string
+  quantity: number
+  referenceType: string | null
+  referenceId: number | null
+  movementDate: string
+  notes: string | null
+  reason: string | null
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -102,6 +114,12 @@ declare global {
         disable: (productId: number) => Promise<unknown>
 
         enable: (productId: number) => Promise<unknown>
+
+        getStockHistory: (
+          productId: number,
+          fromDate?: string | null,
+          toDate?: string | null
+        ) => Promise<StockMovementRecord[]>
       }
 
       billing: {

@@ -1,0 +1,102 @@
+.date-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.date-filter-dialog {
+  width: 520px;
+  background: #ffffff;
+  border: 1px solid #555;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.date-filter-title {
+  padding: 9px 12px;
+  background: #eeeeee;
+  border-bottom: 1px solid #999;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.date-filter-body {
+  padding: 18px;
+}
+
+.date-filter-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.date-filter-row label {
+  font-weight: 600;
+}
+
+.date-filter-row input {
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #888;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.date-filter-row input:focus {
+  border: 2px solid #222;
+}
+
+.date-filter-error {
+  margin-top: 8px;
+  padding: 7px 8px;
+  border: 1px solid #999;
+  background: #f5dddd;
+  color: #8b0000;
+}
+
+.date-filter-presets {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #ccc;
+}
+
+.date-filter-presets-title {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.date-filter-preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.date-filter-preset-buttons button {
+  min-width: 82px;
+  height: 28px;
+  padding: 3px 8px;
+  border: 1px solid #888;
+  background: #eeeeee;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.date-filter-preset-buttons button:focus {
+  outline: 2px solid #222;
+  outline-offset: -2px;
+}
+
+.date-filter-footer {
+  display: flex;
+  gap: 20px;
+  padding: 7px 10px;
+  border-top: 1px solid #888;
+  background: #eeeeee;
+  font-size: 12px;
+}

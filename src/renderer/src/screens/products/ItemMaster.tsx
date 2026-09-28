@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import './item-master.css'
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
+import DateFilterDialog, {
+  type DateRange
+} from '../../components/date-filter-dialog/DateFilterDialog'
+import StockAdjustment from './StockAdjustment'
+import StockHistory from './StockHistory'
+
 type ItemMasterProps = {
   mode?: 'manage' | 'select'
   onBack: () => void
@@ -11,6 +17,16 @@ type ItemMasterProps = {
 
 function formatRupees(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`
+}
+
+function getToday(): string {
+  const now = new Date()
+
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function ItemMaster({
@@ -28,6 +44,17 @@ function ItemMaster({
   const [statusChangeProduct, setStatusChangeProduct] = useState<ProductRecord | null>(null)
   const [statusChanging, setStatusChanging] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'active' | 'disabled' | 'all'>('active')
+
+  const [stockAdjustmentProduct, setStockAdjustmentProduct] = useState<ProductRecord | null>(null)
+
+  const [stockHistoryProduct, setStockHistoryProduct] = useState<ProductRecord | null>(null)
+
+  const [stockHistoryDateFilterOpen, setStockHistoryDateFilterOpen] = useState(false)
+
+  const [stockHistoryDateRange, setStockHistoryDateRange] = useState<DateRange>({
+    fromDate: getToday(),
+    toDate: getToday()
+  })
 
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -61,6 +88,14 @@ function ItemMaster({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
+      /*
+       * Child screen/dialog currently owns the keyboard.
+       * Item Master must not process any shortcuts.
+       */
+      if (stockHistoryDateFilterOpen || stockAdjustmentProduct || stockHistoryProduct) {
+        return
+      }
+
       if (event.key === 'F2') {
         event.preventDefault()
         onAddItem()
@@ -75,6 +110,41 @@ function ItemMaster({
         if (selectedProduct) {
           onEditItem(selectedProduct.id)
         }
+
+        return
+      }
+
+      if (event.key === 'F4') {
+        event.preventDefault()
+
+        if (mode !== 'manage') {
+          return
+        }
+
+        const selectedProduct = products[selectedIndex]
+
+        if (selectedProduct) {
+          setStockAdjustmentProduct(selectedProduct)
+        }
+
+        return
+      }
+
+      /*
+       * F5:
+       * Item Master → select product → Date Filter
+       */
+      if (event.key === 'F5' && mode === 'manage') {
+        event.preventDefault()
+
+        const selectedProduct = products[selectedIndex]
+
+        if (!selectedProduct) {
+          return
+        }
+
+        setStockHistoryProduct(selectedProduct)
+        setStockHistoryDateFilterOpen(true)
 
         return
       }
@@ -100,6 +170,10 @@ function ItemMaster({
           return
         }
 
+        /*
+         * No child screen is active here,
+         * so Escape means Item Master → Dashboard.
+         */
         onBack()
         return
       }
@@ -141,13 +215,66 @@ function ItemMaster({
 
     window.addEventListener('keydown', handleKeyDown)
 
-    return () => {
+    return (): void => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [mode, onAddItem, onBack, onEditItem, onSelectItem, products, searchTerm, selectedIndex])
+  }, [
+    mode,
+    onAddItem,
+    onBack,
+    onEditItem,
+    onSelectItem,
+    products,
+    searchTerm,
+    selectedIndex,
+    stockAdjustmentProduct,
+    stockHistoryDateFilterOpen,
+    stockHistoryProduct
+  ])
 
   function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>): void {
     setSearchTerm(event.target.value)
+  }
+
+  /*
+   * Stock Adjustment screen.
+   */
+  if (stockAdjustmentProduct) {
+    return (
+      <StockAdjustment
+        product={stockAdjustmentProduct}
+        onSaved={async (): Promise<void> => {
+          setStockAdjustmentProduct(null)
+          await loadProducts()
+        }}
+        onCancel={(): void => {
+          setStockAdjustmentProduct(null)
+
+          requestAnimationFrame((): void => {
+            searchRef.current?.focus()
+          })
+        }}
+      />
+    )
+  }
+
+  /*
+   * Stock History screen.
+   *
+   * This is shown ONLY after the user applies
+   * the date filter.
+   */
+  if (stockHistoryProduct && !stockHistoryDateFilterOpen) {
+    return (
+      <StockHistory
+        product={stockHistoryProduct}
+        dateRange={stockHistoryDateRange}
+        onBack={() => {
+          setStockHistoryProduct(null)
+          requestAnimationFrame(() => searchRef.current?.focus())
+        }}
+      />
+    )
   }
 
   return (
@@ -156,8 +283,13 @@ function ItemMaster({
         <div className="item-master-title">ITEM MASTER</div>
 
         <div className="item-master-shortcuts">
+          <span>↑↓ Select</span>
           <span>F2 Add</span>
           <span>F3 Edit</span>
+          <span>F4 Stock Adj</span>
+          <span>F5 History</span>
+          <span>F6 Low Stock</span>
+          <span>Enter No Action</span>
           <span>Esc Back</span>
           <span>DELETE Enable/Disable</span>
         </div>
@@ -186,7 +318,9 @@ function ItemMaster({
           }}
         >
           <option value="active">Active</option>
+
           <option value="disabled">Disabled</option>
+
           <option value="all">All</option>
         </select>
 
@@ -211,7 +345,7 @@ function ItemMaster({
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7} className="table-message">
+                <td colSpan={8} className="table-message">
                   Loading...
                 </td>
               </tr>
@@ -219,7 +353,7 @@ function ItemMaster({
 
             {!loading && error && (
               <tr>
-                <td colSpan={7} className="table-message error">
+                <td colSpan={8} className="table-message error">
                   {error}
                 </td>
               </tr>
@@ -227,7 +361,7 @@ function ItemMaster({
 
             {!loading && !error && products.length === 0 && (
               <tr>
-                <td colSpan={7} className="table-message">
+                <td colSpan={8} className="table-message">
                   No products found
                 </td>
               </tr>
@@ -242,11 +376,12 @@ function ItemMaster({
                   <tr
                     key={product.id}
                     className={selected ? 'selected-row' : ''}
-                    onClick={() => {
+                    onClick={(): void => {
                       setSelectedIndex(index)
+
                       searchRef.current?.focus()
                     }}
-                    onDoubleClick={() => {
+                    onDoubleClick={(): void => {
                       onEditItem(product.id)
                     }}
                   >
@@ -263,6 +398,7 @@ function ItemMaster({
                     <td className="quantity-column">{product.stock_quantity}</td>
 
                     <td className="quantity-column">{product.low_stock_level}</td>
+
                     <td>{product.is_active ? 'Active' : 'Disabled'}</td>
                   </tr>
                 )
@@ -275,6 +411,9 @@ function ItemMaster({
         <span>↑↓ Select</span>
         <span>F2 Add</span>
         <span>F3 Edit</span>
+        <span>F4 Stock Adj</span>
+        <span>F5 History</span>
+        <span>F6 Low Stock</span>
         <span>Enter No Action</span>
         <span>Esc Back</span>
         <span>DELETE Enable/Disable</span>
@@ -286,13 +425,15 @@ function ItemMaster({
           message={
             statusChangeProduct.is_active ? (
               <>
-                Disable <strong>{statusChangeProduct.name}</strong>?
+                Disable <strong>{statusChangeProduct.name}</strong>
+                ?
                 <br />
                 This product will no longer appear in normal billing and product search.
               </>
             ) : (
               <>
-                Enable <strong>{statusChangeProduct.name}</strong>?
+                Enable <strong>{statusChangeProduct.name}</strong>
+                ?
                 <br />
                 This product will become available in normal billing and product search.
               </>
@@ -301,7 +442,7 @@ function ItemMaster({
           confirmText={statusChangeProduct.is_active ? 'Disable' : 'Enable'}
           cancelText="Cancel"
           variant="warning"
-          onConfirm={async () => {
+          onConfirm={async (): Promise<void> => {
             try {
               setStatusChanging(true)
               setError('')
@@ -322,13 +463,29 @@ function ItemMaster({
               setStatusChanging(false)
             }
           }}
-          onCancel={() => {
+          onCancel={(): void => {
             if (!statusChanging) {
               setStatusChangeProduct(null)
             }
           }}
         />
       )}
+
+      <DateFilterDialog
+        open={stockHistoryDateFilterOpen}
+        title="Stock History - Date Filter"
+        initialFromDate={stockHistoryDateRange.fromDate}
+        initialToDate={stockHistoryDateRange.toDate}
+        showPresets
+        onApply={(range: DateRange): void => {
+          setStockHistoryDateRange(range)
+          setStockHistoryDateFilterOpen(false)
+        }}
+        onCancel={(): void => {
+          setStockHistoryDateFilterOpen(false)
+          setStockHistoryProduct(null)
+        }}
+      />
     </div>
   )
 }

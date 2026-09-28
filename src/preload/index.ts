@@ -57,7 +57,18 @@ const api = {
 
     disable: (productId: number) => ipcRenderer.invoke('products:disable', productId),
 
-    enable: (productId: number) => ipcRenderer.invoke('products:enable', productId)
+    enable: (productId: number) => ipcRenderer.invoke('products:enable', productId),
+
+    adjustStock: (
+      productId: number,
+      data: {
+        quantity: number
+        reason: string
+      }
+    ) => ipcRenderer.invoke('products:adjustStock', productId, data),
+
+    getStockHistory: (productId: number, fromDate?: string | null, toDate?: string | null) =>
+      ipcRenderer.invoke('products:getStockHistory', productId, fromDate, toDate)
   },
 
   billing: {

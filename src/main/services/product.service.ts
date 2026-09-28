@@ -1,4 +1,5 @@
 import {
+  adjustProductStock,
   createProduct,
   disableProduct,
   enableProduct,
@@ -22,6 +23,11 @@ import { requireNonEmpty, requireNonNegative, requirePositive } from '../utils/v
 export const PRODUCT_UNITS = ['PCS', 'KG', 'GRAM', 'LITRE', 'ML', 'BOX', 'PACK', 'DOZEN'] as const
 
 export type ProductUnit = (typeof PRODUCT_UNITS)[number]
+
+export type StockAdjustmentData = {
+  quantity: number
+  reason: string
+}
 
 const DEFAULT_QUANTITY_PRECISION: Record<ProductUnit, number> = {
   PCS: 0,
@@ -269,4 +275,42 @@ export function removeProduct(productId: number): void {
   }
 
   disableProduct(productId, nowIso())
+}
+
+export function adjustStock(productId: number, data: StockAdjustmentData): ProductRecord {
+  if (!Number.isInteger(productId) || productId <= 0) {
+    throw new Error('Invalid product ID')
+  }
+
+  const product = findProductByIdAnyStatus(productId)
+
+  if (!product) {
+    throw new Error('Product not found')
+  }
+
+  if (!product.is_active) {
+    throw new Error('Cannot adjust stock for a disabled product')
+  }
+
+  if (!Number.isFinite(data.quantity) || data.quantity === 0) {
+    throw new Error('Stock adjustment cannot be zero')
+  }
+
+  requireValidQuantity(Math.abs(data.quantity), product.quantity_precision, 'Stock adjustment')
+
+  const reason = data.reason.trim()
+
+  if (!reason) {
+    throw new Error('Stock adjustment reason is required')
+  }
+
+  const newStock = product.stock_quantity + data.quantity
+
+  if (newStock < 0) {
+    throw new Error('Stock cannot become negative')
+  }
+
+  requireValidQuantity(newStock, product.quantity_precision, 'New stock quantity')
+
+  return adjustProductStock(productId, data.quantity, reason, nowIso())
 }
