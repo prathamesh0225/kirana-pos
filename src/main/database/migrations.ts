@@ -1,4 +1,6 @@
-import { getDatabase } from './index'
+import path from 'node:path'
+
+import { getDatabase, getDatabaseBackupDirectory } from './index'
 
 type Migration = {
   version: number
@@ -332,53 +334,140 @@ ADD COLUMN reason TEXT;
   }
 ]
 
-export function runMigrations(): void {
+// export function runMigrations(): void {
+//   const db = getDatabase()
+
+//   db.exec(`
+//     CREATE TABLE IF NOT EXISTS migrations (
+//       version INTEGER PRIMARY KEY,
+//       name TEXT NOT NULL,
+//       applied_at TEXT NOT NULL
+//     )
+//   `)
+
+//   const getMigration = db.prepare(`
+//     SELECT version
+//     FROM migrations
+//     WHERE version = ?
+//   `)
+
+//   const insertMigration = db.prepare(`
+//     INSERT INTO migrations (
+//       version,
+//       name,
+//       applied_at
+//     )
+//     VALUES (?, ?, ?)
+//   `)
+
+//   const applyMigration = db.transaction((migration: Migration) => {
+//     migration.sql.split(';').forEach((statement) => {
+//       const trimmedStatement = statement.trim()
+
+//       if (trimmedStatement) {
+//         db.exec(trimmedStatement)
+//       }
+//     })
+
+//     insertMigration.run(migration.version, migration.name, new Date().toISOString())
+//   })
+
+//   for (const migration of migrations) {
+//     const existing = getMigration.get(migration.version) as
+//       | {
+//           version: number
+//         }
+//       | undefined
+
+//     if (!existing) {
+//       applyMigration(migration)
+//     }
+//   }
+// }
+
+export async function runMigrations(): Promise<void> {
   const db = getDatabase()
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS migrations (
-      version INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      applied_at TEXT NOT NULL
+  const migrationsTableExists = db
+    .prepare(
+      `
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name = 'migrations'
+      `
     )
-  `)
+    .get()
 
-  const getMigration = db.prepare(`
-    SELECT version
-    FROM migrations
-    WHERE version = ?
-  `)
+  if (!migrationsTableExists) {
+    db.exec(`
+      CREATE TABLE migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT NOT NULL
+      )
+    `)
+  }
 
-  const insertMigration = db.prepare(`
-    INSERT INTO migrations (
-      version,
-      name,
-      applied_at
+  const latestMigration = migrations[migrations.length - 1]
+
+  const currentMigration = db
+    .prepare(
+      `
+      SELECT MAX(version) AS version
+      FROM migrations
+      `
     )
-    VALUES (?, ?, ?)
-  `)
+    .get() as { version: number | null }
 
-  const applyMigration = db.transaction((migration: Migration) => {
-    migration.sql.split(';').forEach((statement) => {
-      const trimmedStatement = statement.trim()
+  const currentVersion = currentMigration.version ?? 0
+  const latestVersion = latestMigration.version
 
-      if (trimmedStatement) {
-        db.exec(trimmedStatement)
-      }
-    })
+  if (currentVersion >= latestVersion) {
+    return
+  }
 
-    insertMigration.run(migration.version, migration.name, new Date().toISOString())
-  })
+  // Existing database is being upgraded.
+  // Make a safety backup before changing its schema.
+  if (currentVersion > 0) {
+    const backupDirectory = getDatabaseBackupDirectory()
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+    const backupPath = path.join(
+      backupDirectory,
+      `before-migration-${currentVersion}-to-${latestVersion}-${timestamp}.db`
+    )
+
+    console.log(`Creating migration backup: ${backupPath}`)
+
+    await db.backup(backupPath)
+
+    console.log('Migration backup created successfully.')
+  }
 
   for (const migration of migrations) {
-    const existing = getMigration.get(migration.version) as
-      | {
-          version: number
-        }
-      | undefined
-
-    if (!existing) {
-      applyMigration(migration)
+    if (migration.version <= currentVersion) {
+      continue
     }
+
+    console.log(`Applying migration ${migration.version}`)
+
+    const transaction = db.transaction(() => {
+      db.exec(migration.sql)
+
+      db.prepare(
+        `
+        INSERT INTO migrations (
+          version,
+          applied_at
+        )
+        VALUES (?, ?)
+        `
+      ).run(migration.version, new Date().toISOString())
+    })
+
+    transaction()
+
+    console.log(`Migration ${migration.version} applied.`)
   }
 }

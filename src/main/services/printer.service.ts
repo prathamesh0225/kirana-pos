@@ -5,8 +5,6 @@ export type PrinterInfo = {
   name: string
   displayName: string
   description: string
-  status: number
-  isDefault: boolean
 }
 
 export async function getInstalledPrinters(): Promise<PrinterInfo[]> {
@@ -23,9 +21,7 @@ export async function getInstalledPrinters(): Promise<PrinterInfo[]> {
     return printers.map((printer) => ({
       name: printer.name,
       displayName: printer.displayName,
-      description: printer.description,
-      status: printer.status,
-      isDefault: printer.isDefault
+      description: printer.description
     }))
   } finally {
     window.destroy()

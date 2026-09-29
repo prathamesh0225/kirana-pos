@@ -1,21 +1,23 @@
 import { app, BrowserWindow } from 'electron'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { join } from 'node:path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+
 import { runMigrations } from './database/migrations'
-import { registerIpcHandlers } from './ipc'
+import { registerAppIpc } from './ipc/app.ipc'
+import { registerDatabaseIpc } from './ipc/database.ipc'
+import { registerProductIpc } from './ipc/products.ipc'
+import { registerBillingIpc } from './ipc/billing.ipc'
+import { registerPrinterIpc } from './ipc/printer.ipc'
+import { registerSettingsIpc } from './ipc/settings.ipc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
       sandbox: true
     }
   })
@@ -25,39 +27,48 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler(() => {
-    return {
-      action: 'deny'
-    }
+    return { action: 'deny' }
   })
 
-  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+  if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.kirana.pos')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  runMigrations()
-  registerIpcHandlers()
+  try {
+    await runMigrations()
 
-  createWindow()
+    registerAppIpc()
+    registerDatabaseIpc()
+    registerProductIpc()
+    registerBillingIpc()
+    registerPrinterIpc()
+    registerSettingsIpc()
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    }
-  })
+    createWindow()
+  } catch (error) {
+    console.error('Failed to initialize database:', error)
+    app.quit()
+  }
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
   }
 })

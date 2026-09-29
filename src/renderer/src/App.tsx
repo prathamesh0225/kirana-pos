@@ -478,11 +478,6 @@ function App(): React.JSX.Element {
            * while viewing/modifying a historical bill.
            */
         }}
-        onPayment={() => {
-          /*
-           * Payment is intentionally unavailable for historical bills.
-           */
-        }}
         onBillCompleted={() => {
           /*
            * Historical bills are not completed again.

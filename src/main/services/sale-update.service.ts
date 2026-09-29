@@ -1,5 +1,4 @@
 import { getDatabase } from '../database'
-import { requireValidQuantity } from '../utils/quantity'
 
 export type UpdateSaleLine = {
   saleItemId?: number

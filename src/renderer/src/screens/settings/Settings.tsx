@@ -20,6 +20,27 @@ export function Settings({ onBack }: SettingsProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
 
+  const [appInfo, setAppInfo] = useState<{
+    name: string
+    version: string
+  } | null>(null)
+
+  const [databaseVersion, setDatabaseVersion] = useState<number | null>(null)
+
+  useEffect(() => {
+    async function loadSystemInfo() {
+      const [info, database] = await Promise.all([
+        window.kirana.app.getInfo(),
+        window.kirana.database.test()
+      ])
+
+      setAppInfo(info)
+      setDatabaseVersion(database.migrationVersion)
+    }
+
+    void loadSystemInfo()
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -106,12 +127,12 @@ export function Settings({ onBack }: SettingsProps) {
     try {
       const result = await window.kirana.database.backup()
 
-      if (result.cancelled) {
+      if (result.canceled) {
         setMessage('Backup cancelled')
         return
       }
 
-      setMessage(`Backup created successfully: ${result.path}`)
+      setMessage(`Backup created successfully: ${result.filePath}`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Database backup failed')
     }
@@ -133,8 +154,27 @@ export function Settings({ onBack }: SettingsProps) {
       <div className="settings-title">SETTINGS</div>
 
       <div className="settings-panel">
-        <div className="settings-section-title">PRINTER</div>
+        <div className="settings-section-title">APP INFO</div>
+        <section className="settings-panel">
+          <h2>System Information</h2>
 
+          <div className="settings-row">
+            <span>Application</span>
+            <strong>{appInfo?.name ?? 'Kirana Mart POS'}</strong>
+          </div>
+
+          <div className="settings-row">
+            <span>Application Version</span>
+            <strong>{appInfo?.version ?? '—'}</strong>
+          </div>
+
+          <div className="settings-row">
+            <span>Database Version</span>
+            <strong>{databaseVersion ?? '—'}</strong>
+          </div>
+        </section>
+
+        <div className="settings-section-title">PRINTER</div>
         <div className="settings-row">
           <label htmlFor="thermal-printer">Thermal Printer</label>
 

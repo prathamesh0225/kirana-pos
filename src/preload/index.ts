@@ -3,8 +3,15 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   app: {
     getName: () => 'Kirana Mart POS',
-    getVersion: () => '0.1.0',
-    ping: () => ipcRenderer.invoke('app:ping')
+
+    getVersion: async () => {
+      const info = await ipcRenderer.invoke('app:getInfo')
+      return info.version
+    },
+
+    getInfo: async () => {
+      return ipcRenderer.invoke('app:getInfo')
+    }
   },
 
   database: {

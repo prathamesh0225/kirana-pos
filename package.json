@@ -1,9 +1,9 @@
 {
   "name": "kirana-pos",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "Offline-first Kirana Mart POS and inventory management system",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "Kirana Mart",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

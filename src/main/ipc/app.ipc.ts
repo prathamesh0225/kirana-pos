@@ -1,10 +1,10 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 
 export function registerAppIpc(): void {
-  ipcMain.handle('app:ping', () => {
+  ipcMain.handle('app:getInfo', () => {
     return {
-      success: true,
-      message: 'Electron main process is working'
+      name: 'Kirana Mart POS',
+      version: app.getVersion()
     }
   })
 }

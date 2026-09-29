@@ -32,3 +32,22 @@ export function closeDatabase(): void {
     db = null
   }
 }
+
+export function getDatabasePath(): string {
+  const dataDir = path.join(app.getPath('userData'), 'data')
+  return path.join(dataDir, 'kirana.db')
+}
+
+export function getDatabaseBackupDirectory(): string {
+  const backupDir = path.join(app.getPath('userData'), 'backups')
+
+  fs.mkdirSync(backupDir, { recursive: true })
+
+  return backupDir
+}
+
+export async function backupDatabase(destinationPath: string): Promise<void> {
+  const database = getDatabase()
+
+  await database.backup(destinationPath)
+}

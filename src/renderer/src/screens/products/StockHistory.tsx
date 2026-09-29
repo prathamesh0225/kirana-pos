@@ -23,8 +23,8 @@ type StockMovementRecord = {
 }
 
 type DateRange = {
-  fromDate: string
-  toDate: string
+  fromDate: string | null
+  toDate: string | null
 }
 
 type StockHistoryProps = {

@@ -127,6 +127,39 @@ function makeCompactTotalLine(label: string, amountPaise: number): string {
   return padRight(label, labelWidth) + amount
 }
 
+function mergeReceiptLines(lines: EscPosReceiptLine[]): EscPosReceiptLine[] {
+  const merged = new Map<string, EscPosReceiptLine>()
+
+  for (const line of lines) {
+    /*
+     * Use product name + MRP + rate as the identity of
+     * a printable item.
+     *
+     * Same product with different rates should remain
+     * as separate lines.
+     */
+    const key = [line.productName, line.mrpPaise, line.ratePaise].join('|')
+
+    const existing = merged.get(key)
+
+    if (!existing) {
+      merged.set(key, {
+        ...line
+      })
+      continue
+    }
+
+    merged.set(key, {
+      ...existing,
+      quantity: existing.quantity + line.quantity,
+      freeQuantity: existing.freeQuantity + line.freeQuantity,
+      amountPaise: existing.amountPaise + line.amountPaise
+    })
+  }
+
+  return Array.from(merged.values())
+}
+
 function buildReceiptText(receipt: EscPosReceipt): string {
   const lines: string[] = []
 
@@ -178,7 +211,9 @@ function buildReceiptText(receipt: EscPosReceipt): string {
 
   lines.push('-'.repeat(RECEIPT_WIDTH))
 
-  for (const line of receipt.lines) {
+  const printableLines = mergeReceiptLines(receipt.lines)
+
+  for (const line of printableLines) {
     lines.push(makeItemLine(line))
   }
 

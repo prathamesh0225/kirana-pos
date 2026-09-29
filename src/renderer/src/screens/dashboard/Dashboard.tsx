@@ -13,7 +13,7 @@ type DashboardProps = {
   onOpenSettings: () => void
 }
 
-export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory, onOpenSettings }: DashboardProps) {
+export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: DashboardProps) {
   const [salesSummary, setSalesSummary] = useState<DashboardSalesSummary>({
     totalSalesPaise: 0,
     billsToday: 0

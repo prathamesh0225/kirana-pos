@@ -13,7 +13,6 @@ type BillingProps = {
   onAddItem?: () => void
   onEditItem?: (productId: number) => void
   onNewBill: () => void
-  onPayment: () => void
   onBillCompleted: (billNumber: string) => void
   onOpenBillHistory: () => void
 
@@ -150,9 +149,7 @@ function Billing({
 
   const [showHistoricalPayment, setShowHistoricalPayment] = useState(false)
 
-  const [pendingHistoricalPayment, setPendingHistoricalPayment] = useState<PaymentResult | null>(
-    null
-  )
+  const [, setPendingHistoricalPayment] = useState<PaymentResult | null>(null)
 
   const [showHistoricalRefundConfirmation, setShowHistoricalRefundConfirmation] = useState(false)
 
@@ -275,6 +272,7 @@ function Billing({
       return
     }
 
+    const currentSaleId = saleId
     let cancelled = false
 
     async function loadHistoricalBill(): Promise<void> {
@@ -282,7 +280,7 @@ function Billing({
         setHistoricalLoading(true)
         setHistoricalError('')
 
-        const sale = await window.kirana.billing.getSaleById(saleId)
+        const sale = await window.kirana.billing.getSaleById(currentSaleId)
 
         if (cancelled) {
           return
@@ -1196,15 +1194,6 @@ function Billing({
     setShowHistoricalRefundConfirmation(true)
   }
 
-  function startNextBill(): void {
-    setPendingPayment(null)
-    setShowPayment(false)
-    setShowCompleteConfirmation(false)
-    setShowPrintConfirmation(false)
-
-    onNewBill()
-  }
-
   if (isHistoricalBill && historicalLoading) {
     return (
       <div className="billing-screen">
@@ -1758,7 +1747,7 @@ function Billing({
 
                 totalAmountPaise: lines.reduce((total, line) => total + line.amountPaise, 0),
 
-                paymentMethod: pendingPayment?.method,
+                paymentMethod: pendingPayment?.mode,
                 paidPaise: pendingPayment?.paidPaise,
                 changePaise: pendingPayment?.changePaise
               }

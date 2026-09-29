@@ -6,6 +6,23 @@ type PrinterInfo = {
   description: string
 }
 
+type ProductRecord = {
+  id: number
+  barcode: string | null
+  name: string
+  category_id: number | null
+  unit: string
+  quantity_precision: number
+  mrp_paise: number
+  selling_price_paise: number
+  purchase_price_paise: number
+  stock_quantity: number
+  low_stock_level: number
+  is_active: number
+  created_at: string
+  updated_at: string
+}
+
 type EscPosReceiptLine = {
   productName: string
   mrpPaise: number
@@ -54,34 +71,39 @@ declare global {
     kirana: {
       app: {
         getName: () => string
-        getVersion: () => string
-        ping: () => Promise<unknown>
+        getVersion: () => Promise<string>
+        getInfo: () => Promise<{
+          name: string
+          version: string
+        }>
       }
 
       database: {
-        test: () => Promise<unknown>
+        test: () => Promise<{
+          success: boolean
+          migrationVersion: number
+        }>
 
         backup: () => Promise<{
-          success: boolean
-          cancelled?: boolean
-          path?: string
+          canceled: boolean
+          filePath?: string
         }>
       }
 
       products: {
-        getByBarcode: (barcode: string) => Promise<unknown>
+        getByBarcode: (barcode: string) => Promise<ProductRecord | undefined>
 
-        getById: (productId: number) => Promise<unknown>
+        getById: (productId: number) => Promise<ProductRecord | undefined>
 
-        getByIdAnyStatus: (productId: number) => Promise<unknown>
+        getByIdAnyStatus: (productId: number) => Promise<ProductRecord | undefined>
 
-        list: (limit?: number, status?: 'active' | 'disabled' | 'all') => Promise<unknown>
+        list: (limit?: number, status?: 'active' | 'disabled' | 'all') => Promise<ProductRecord[]>
 
         search: (
           searchTerm: string,
           limit?: number,
           status?: 'active' | 'disabled' | 'all'
-        ) => Promise<unknown>
+        ) => Promise<ProductRecord[]>
 
         create: (data: {
           barcode?: string
@@ -94,7 +116,7 @@ declare global {
           purchasePricePaise: number
           stockQuantity?: number
           lowStockLevel?: number
-        }) => Promise<unknown>
+        }) => Promise<ProductRecord[]>
 
         update: (
           productId: number,
@@ -109,11 +131,19 @@ declare global {
             purchasePricePaise: number
             lowStockLevel?: number
           }
-        ) => Promise<unknown>
+        ) => Promise<ProductRecord[]>
 
         disable: (productId: number) => Promise<unknown>
 
         enable: (productId: number) => Promise<unknown>
+
+        adjustStock: (
+          productId: number,
+          data: {
+            quantity: number
+            reason: string
+          }
+        ) => Promise<unknown>
 
         getStockHistory: (
           productId: number,
