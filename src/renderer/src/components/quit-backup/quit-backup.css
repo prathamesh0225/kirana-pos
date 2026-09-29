@@ -1,0 +1,108 @@
+.quit-backup-screen {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #dce8f0;
+  color: #172b3b;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 14px;
+}
+
+.quit-backup-panel {
+  width: 560px;
+  min-height: 230px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #8fa3b1;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.quit-backup-title {
+  height: 34px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 14px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.quit-backup-message {
+  padding: 36px 28px 20px;
+
+  text-align: center;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.quit-backup-progress {
+  height: 18px;
+  margin: 0 28px;
+
+  overflow: hidden;
+
+  border: 1px solid #8fa3b1;
+  background: #e7edf1;
+}
+
+.quit-backup-progress-bar {
+  width: 35%;
+  height: 100%;
+
+  background: #315f82;
+
+  animation: quit-backup-progress 1.3s linear infinite;
+}
+
+@keyframes quit-backup-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.quit-backup-note {
+  padding: 20px 28px;
+
+  text-align: center;
+
+  color: #5c6e7a;
+  font-size: 13px;
+}
+
+.quit-backup-error {
+  color: #8b2f2f;
+}
+
+.quit-backup-error-detail {
+  margin: 0 28px;
+  padding: 12px;
+
+  border: 1px solid #d4a4a4;
+  background: #f8eeee;
+
+  color: #702626;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}

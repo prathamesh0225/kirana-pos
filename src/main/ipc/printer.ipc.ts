@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { getInstalledPrinters, printTestPage } from '../services/printer.service'
 import { printReceipt, type EscPosReceipt } from '../services/escpos.service'
 
+let receiptPrintInProgress = false
 export function registerPrinterIpc(): void {
   ipcMain.handle('printer:list', async () => {
     return getInstalledPrinters()
@@ -14,7 +15,17 @@ export function registerPrinterIpc(): void {
   ipcMain.handle(
     'printer:printReceipt',
     async (_event, printerName: string, receipt: EscPosReceipt) => {
-      await printReceipt(printerName, receipt)
+      if (receiptPrintInProgress) {
+        throw new Error('Printer is busy. Please wait for the current receipt to finish.')
+      }
+
+      receiptPrintInProgress = true
+
+      try {
+        await printReceipt(printerName, receipt)
+      } finally {
+        receiptPrintInProgress = false
+      }
     }
   )
 

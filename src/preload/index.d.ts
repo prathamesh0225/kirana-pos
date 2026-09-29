@@ -76,6 +76,7 @@ declare global {
           name: string
           version: string
         }>
+        quit: () => Promise<void>
       }
 
       database: {
@@ -87,6 +88,11 @@ declare global {
         backup: () => Promise<{
           canceled: boolean
           filePath?: string
+        }>
+
+        backupOnExit: () => Promise<{
+          ok: boolean
+          filePath: string
         }>
       }
 

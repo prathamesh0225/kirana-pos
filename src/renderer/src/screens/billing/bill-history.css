@@ -1,83 +1,180 @@
+/* =========================================================
+   BILL HISTORY
+   ========================================================= */
+
 .bill-history {
+  width: 100%;
   height: 100%;
+
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  color: #111111;
-  font-size: 13px;
+
+  box-sizing: border-box;
+
+  padding: 14px 20px;
+
+  background: #dce8f0;
+  color: #172b3b;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 14px;
+
+  overflow: hidden;
 }
 
+/* =========================================================
+   TITLE BAR
+   ========================================================= */
+
 .bill-history-header {
-  height: 38px;
-  flex-shrink: 0;
+  height: 35px;
+  min-height: 30px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
-  border-bottom: 1px solid #808080;
-  background: #e6e6e6;
+
+  margin: 0 0 8px;
+  padding: 0 12px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  border: 1px solid #102d48;
 }
 
 .bill-history-title {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
 }
 
 .bill-history-count {
-  font-size: 12px;
+  font-size: 18px;
+  font-weight: 600;
 }
+
+/* =========================================================
+   BILL LIST AREA
+   ========================================================= */
 
 .bill-history-table-wrapper {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+
+  margin: 0 0 8px;
+
   overflow-x: hidden;
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #b5c5cf;
+
+  scrollbar-width: none;
 }
+
+.bill-history-table-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================
+   BILL LIST
+   ========================================================= */
 
 .bill-history-table {
   width: 100%;
+
   border-collapse: collapse;
   table-layout: fixed;
+
+  background: #ffffff;
 }
 
-.bill-history-table th,
+/* =========================================================
+   LIST HEADER
+   ========================================================= */
+
+.bill-history-table th {
+  height: 32px;
+
+  padding: 4px 10px;
+
+  background: #b9cfdd;
+  color: #173650;
+
+  border: none;
+  border-bottom: 1px solid #91a8b7;
+
+  font-size: 20px;
+  font-weight: 900;
+
+  text-align: left;
+
+  white-space: nowrap;
+
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* =========================================================
+   LIST ROWS
+   ========================================================= */
+
 .bill-history-table td {
-  height: 28px;
-  padding: 3px 8px;
-  border-right: 1px solid #c0c0c0;
-  border-bottom: 1px solid #d0d0d0;
+  height: 34px;
+
+  padding: 4px 10px;
+
+  background: #ffffff;
+  color: #172b3b;
+
+  border: none;
+  border-bottom: 1px solid #e1e6e9;
+
+  font-size: 18px;
+
+  text-align: left;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.bill-history-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: #d9d9d9;
-  border-bottom: 1px solid #808080;
-  font-weight: 700;
-  text-align: left;
+/* No vertical column lines */
+
+.bill-history-table th,
+.bill-history-table td {
+  border-right: none;
 }
 
-.bill-history-row {
-  cursor: default;
+/* =========================================================
+   SELECTED BILL
+   ========================================================= */
+
+.bill-history-row.selected td {
+  background: #172f47;
+  color: #ffffff;
+
+  border-bottom-color: #172f47;
 }
 
-.bill-history-row.selected {
-  background: #cfe2f3;
-  outline: 1px solid #4a78a8;
-  outline-offset: -1px;
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.bill-history-row:hover td {
+  background: #f3f6f8;
 }
 
-.bill-history-row:hover {
-  background: #eaf2f8;
+.bill-history-row.selected:hover td {
+  background: #172f47;
+  color: #ffffff;
 }
 
-.bill-history-row.selected:hover {
-  background: #cfe2f3;
-}
+/* =========================================================
+   COLUMN WIDTHS
+   ========================================================= */
 
 .col-bill {
   width: 130px;
@@ -89,6 +186,7 @@
 
 .col-money {
   width: 120px;
+
   text-align: right;
 }
 
@@ -96,24 +194,50 @@
   width: 170px;
 }
 
+/* =========================================================
+   EMPTY / MESSAGE
+   ========================================================= */
+
 .bill-history-message {
   padding: 20px;
-  font-size: 13px;
+
+  background: #ffffff;
+
+  color: #687985;
+
+  font-size: 14px;
+
+  text-align: center;
 }
 
 .bill-history-error {
-  color: #a00000;
+  color: #8b2020;
 }
 
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
 .bill-history-footer {
-  height: 32px;
-  flex-shrink: 0;
+  height: 30px;
+  min-height: 30px;
+
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 0 10px;
-  border-top: 1px solid #808080;
-  background: #e6e6e6;
-  color: #222222;
-  font-size: 11px;
+
+  gap: 20px;
+
+  margin: 0;
+
+  padding: 0 12px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  border: 1px solid #102d48;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  white-space: nowrap;
 }

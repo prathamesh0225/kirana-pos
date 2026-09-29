@@ -8,6 +8,7 @@ import { AppShell } from './components/app-shell/AppShell'
 import type { BillingSession } from './screens/billing/billing.types'
 import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
 import { Settings } from './screens/settings/Settings'
+import { QuitBackupScreen } from './components/quit-backup/QuitBackupScreen'
 
 type HistoricalBillMode = 'view' | 'modify'
 
@@ -98,6 +99,49 @@ function App(): React.JSX.Element {
   )
 
   const [showExitBillingConfirm, setShowExitBillingConfirm] = useState(false)
+
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
+
+  const [quitBackupStatus, setQuitBackupStatus] = useState<
+    'backing-up' | 'success' | 'error' | null
+  >(null)
+
+  const [quitBackupError, setQuitBackupError] = useState<string | undefined>(undefined)
+
+  async function handleQuitApplication(): Promise<void> {
+    if (quitBackupStatus !== null) {
+      return
+    }
+
+    setShowQuitConfirm(true)
+  }
+
+  async function performQuitBackup(): Promise<void> {
+    if (quitBackupStatus !== null) {
+      return
+    }
+
+    setShowQuitConfirm(false)
+    setQuitBackupError(undefined)
+    setQuitBackupStatus('backing-up')
+
+    try {
+      await window.kirana.database.backupOnExit()
+
+      setQuitBackupStatus('success')
+
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 700)
+      })
+
+      await window.kirana.app.quit()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to create database backup.'
+
+      setQuitBackupError(message)
+      setQuitBackupStatus('error')
+    }
+  }
 
   /*
    * Load the two persistent billing slots.
@@ -262,6 +306,10 @@ function App(): React.JSX.Element {
 
   const activeBillingSession = billingSessions === null ? null : billingSessions[activeBillingIndex]
 
+  if (quitBackupStatus !== null) {
+    return <QuitBackupScreen status={quitBackupStatus} errorMessage={quitBackupError} />
+  }
+
   /*
    * Billing sessions are still loading.
    */
@@ -276,32 +324,51 @@ function App(): React.JSX.Element {
    */
   if (screen.type === 'dashboard') {
     return (
-      <AppShell activeMenu="dashboard" onMenuSelect={handleMenuSelect}>
-        <Dashboard
-          onOpenBilling={() => {
-            setScreen({
-              type: 'billing'
-            })
-          }}
-          onOpenItems={() => {
-            setScreen({
-              type: 'item-master',
-              returnTo: 'dashboard'
-            })
-          }}
-          onOpenBillHistory={() =>
-            setScreen({
-              type: 'bill-history',
-              returnTo: 'dashboard'
-            })
-          }
-          onOpenSettings={() => {
-            setScreen({
-              type: 'settings'
-            })
-          }}
-        />
-      </AppShell>
+      <>
+        <AppShell
+          activeMenu="dashboard"
+          onMenuSelect={handleMenuSelect}
+          onQuit={handleQuitApplication}
+        >
+          <Dashboard
+            onOpenBilling={() => {
+              setScreen({
+                type: 'billing'
+              })
+            }}
+            onOpenItems={() => {
+              setScreen({
+                type: 'item-master',
+                returnTo: 'dashboard'
+              })
+            }}
+            onOpenBillHistory={() =>
+              setScreen({
+                type: 'bill-history',
+                returnTo: 'dashboard'
+              })
+            }
+            onOpenSettings={() => {
+              setScreen({
+                type: 'settings'
+              })
+            }}
+          />
+        </AppShell>
+
+        {showQuitConfirm && (
+          <ConfirmDialog
+            title="Quit Kirana?"
+            message="A database backup will be created before the application closes. Do you want to continue?"
+            onConfirm={() => {
+              void performQuitBackup()
+            }}
+            onCancel={() => {
+              setShowQuitConfirm(false)
+            }}
+          />
+        )}
+      </>
     )
   }
 

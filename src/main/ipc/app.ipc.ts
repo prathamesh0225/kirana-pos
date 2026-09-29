@@ -7,4 +7,7 @@ export function registerAppIpc(): void {
       version: app.getVersion()
     }
   })
+  ipcMain.handle('app:quit', () => {
+    app.quit()
+  })
 }

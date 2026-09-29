@@ -155,9 +155,8 @@ export function Settings({ onBack }: SettingsProps) {
 
       <div className="settings-panel">
         <div className="settings-section-title">APP INFO</div>
-        <section className="settings-panel">
-          <h2>System Information</h2>
 
+        <section className="settings-system-info">
           <div className="settings-row">
             <span>Application</span>
             <strong>{appInfo?.name ?? 'Kirana Mart POS'}</strong>
@@ -173,7 +172,6 @@ export function Settings({ onBack }: SettingsProps) {
             <strong>{databaseVersion ?? '—'}</strong>
           </div>
         </section>
-
         <div className="settings-section-title">PRINTER</div>
         <div className="settings-row">
           <label htmlFor="thermal-printer">Thermal Printer</label>

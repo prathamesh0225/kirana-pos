@@ -1,99 +1,340 @@
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+
 .settings-screen {
+  width: 100%;
   height: 100%;
+
   display: flex;
   flex-direction: column;
-  background: #f4f4f4;
-  color: #111;
-  font-family: Arial, sans-serif;
+
+  box-sizing: border-box;
+
+  padding: 14px 20px;
+
+  background: #dce8f0;
+  color: #172b3b;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 14px;
+
+  overflow: hidden;
 }
 
+/* =========================================================
+   TITLE BAR
+   ========================================================= */
+
 .settings-title {
-  height: 42px;
+  height: 30px;
+  min-height: 30px;
+
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  border-bottom: 1px solid #999;
-  background: #ddd;
+
+  margin: 0 0 8px;
+  padding: 0 12px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  border: 1px solid #102d48;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   MAIN SETTINGS AREA
+   ========================================================= */
+
+.settings-panel {
+  width: 720px;
+
+  margin: 0 0 8px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+
+  border: 1px solid #b5c5cf;
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   SECTION TITLE
+   ========================================================= */
+
+.settings-section-title {
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 0 12px;
+
+  background: #b9cfdd;
+  color: #173650;
+
+  border-bottom: 1px solid #91a8b7;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   SYSTEM INFORMATION
+   ========================================================= */
+
+.settings-panel h2 {
+  display: none;
+}
+
+/* =========================================================
+   SETTINGS ROW
+   ========================================================= */
+
+.settings-row {
+  min-height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 5px 12px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e1e6e9;
+}
+
+.settings-row > span,
+.settings-row > label {
+  width: 190px;
+
+  flex-shrink: 0;
+
+  color: #536878;
+
   font-size: 18px;
   font-weight: 700;
 }
 
-.settings-panel {
-  width: 700px;
-  margin: 24px;
-  border: 1px solid #999;
-  background: #fff;
-}
+.settings-row strong {
+  color: #172b3b;
 
-.settings-section-title {
-  padding: 8px 10px;
-  border-bottom: 1px solid #aaa;
-  background: #e5e5e5;
-  font-weight: 700;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  padding: 14px 12px;
-  border-bottom: 1px solid #ddd;
-}
-
-.settings-row label {
-  width: 180px;
+  font-size: 18px;
   font-weight: 600;
 }
+
+/* =========================================================
+   PRINTER SELECT
+   ========================================================= */
 
 .settings-row select {
   width: 420px;
   height: 32px;
-  padding: 3px 6px;
-  font-size: 14px;
+
+  box-sizing: border-box;
+
+  padding: 3px 8px;
+
+  border: 1px solid #8fa3b1;
+  border-radius: 0;
+
+  outline: none;
+
+  background: #ffffff;
+  color: #172b3b;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 18px;
 }
+
+.settings-row select:focus {
+  border: 2px solid #173f66;
+
+  background: #f7fbfd;
+}
+
+/* =========================================================
+   CURRENT PRINTER
+   ========================================================= */
 
 .settings-current {
-  padding: 12px;
-  font-size: 13px;
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 5px 12px;
+
+  background: #eef3f6;
+
+  border-bottom: 1px solid #d5e0e6;
+
+  color: #536878;
+
+  font-size: 18px;
 }
 
+.settings-current strong {
+  margin-left: 6px;
+
+  color: #173650;
+
+  font-weight: 700;
+}
+
+/* =========================================================
+   WARNING
+   ========================================================= */
+
 .settings-warning {
-  margin: 10px 12px;
-  padding: 8px;
-  border: 1px solid #999;
-  background: #eee;
+  margin: 8px 12px;
+
+  padding: 8px 10px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #c5a66b;
+
+  background: #fff9e8;
+
+  color: #765719;
+
+  font-size: 18px;
   font-weight: 600;
 }
 
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
 .settings-actions {
   display: flex;
+  align-items: center;
+
   gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ddd;
+
+  padding: 10px 12px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e1e6e9;
 }
 
-.settings-actions button {
+.settings-actions button,
+.settings-row button {
   min-width: 110px;
-  height: 32px;
+  height: 30px;
+
+  box-sizing: border-box;
+
   padding: 0 12px;
+
+  border: 1px solid #8fa3b1;
+  border-radius: 0;
+
+  background: #ffffff;
+  color: #173650;
+
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 18px;
+  font-weight: 700;
+
   cursor: pointer;
 }
 
+.settings-actions button:hover,
+.settings-row button:hover {
+  background: #e8f0f5;
+}
+
+.settings-actions button:focus,
+.settings-row button:focus {
+  outline: 2px solid #173f66;
+  outline-offset: 1px;
+}
+
+.settings-actions button:disabled,
+.settings-row button:disabled {
+  opacity: 0.5;
+
+  cursor: default;
+}
+
+/* =========================================================
+   DATABASE BACKUP BUTTON
+   ========================================================= */
+
+.settings-row button {
+  min-width: 150px;
+}
+
+/* =========================================================
+   MESSAGE
+   ========================================================= */
+
 .settings-message {
-  padding: 0 12px 12px;
-  font-size: 13px;
-}
+  min-height: 34px;
 
-.settings-loading {
-  padding: 24px;
-}
-
-.settings-footer {
-  margin-top: auto;
-  height: 34px;
   display: flex;
   align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 5px 12px;
+
+  background: #eef3f6;
+
+  border-top: 1px solid #d5e0e6;
+
+  color: #536878;
+
+  font-size: 18px;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.settings-loading {
+  padding: 30px 20px;
+
+  color: #536878;
+
+  font-size: 14px;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.settings-footer {
+  height: 35px;
+  min-height: 30px;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  margin: auto 0 0;
   padding: 0 12px;
-  border-top: 1px solid #999;
-  background: #ddd;
-  font-size: 12px;
+
+  background: #173f66;
+  color: #ffffff;
+
+  border: 1px solid #102d48;
+
+  font-size: 18px;
+  font-weight: 600;
 }

@@ -1,6 +1,6 @@
 import { dialog, ipcMain } from 'electron'
-import { backupDatabase, getDatabase } from '../database'
-
+import { backupDatabase, getDatabase, getDatabaseBackupDirectory } from '../database'
+import path from 'node:path'
 export function registerDatabaseIpc(): void {
   ipcMain.handle('database:test', () => {
     const db = getDatabase()
@@ -43,6 +43,29 @@ export function registerDatabaseIpc(): void {
     return {
       canceled: false,
       filePath: result.filePath
+    }
+  })
+
+  ipcMain.handle('database:backupOnExit', async () => {
+    const backupDirectory = getDatabaseBackupDirectory()
+
+    const now = new Date()
+
+    const timestamp =
+      `${now.getFullYear()}-` +
+      `${String(now.getMonth() + 1).padStart(2, '0')}-` +
+      `${String(now.getDate()).padStart(2, '0')}_` +
+      `${String(now.getHours()).padStart(2, '0')}` +
+      `${String(now.getMinutes()).padStart(2, '0')}` +
+      `${String(now.getSeconds()).padStart(2, '0')}`
+
+    const backupPath = path.join(backupDirectory, `kirana-backup-${timestamp}.db`)
+
+    await backupDatabase(backupPath)
+
+    return {
+      ok: true,
+      filePath: backupPath
     }
   })
 }

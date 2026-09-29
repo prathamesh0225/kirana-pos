@@ -11,13 +11,15 @@ const api = {
 
     getInfo: async () => {
       return ipcRenderer.invoke('app:getInfo')
-    }
+    },
+    quit: () => ipcRenderer.invoke('app:quit')
   },
 
   database: {
     test: () => ipcRenderer.invoke('database:test'),
 
-    backup: () => ipcRenderer.invoke('database:backup')
+    backup: () => ipcRenderer.invoke('database:backup'),
+    backupOnExit: () => ipcRenderer.invoke('database:backupOnExit')
   },
 
   products: {

@@ -277,6 +277,8 @@ function ItemMaster({
     )
   }
 
+  const selectedProduct = products[selectedIndex]
+
   return (
     <div className="item-master">
       <div className="item-master-header">
@@ -333,7 +335,6 @@ function ItemMaster({
             <tr>
               <th className="select-column"></th>
               <th>Product</th>
-              <th>Barcode</th>
               <th className="money-column">MRP</th>
               <th className="money-column">Rate</th>
               <th className="quantity-column">Stock</th>
@@ -389,8 +390,6 @@ function ItemMaster({
 
                     <td>{product.name}</td>
 
-                    <td>{product.barcode ?? ''}</td>
-
                     <td className="money-column">{formatRupees(product.mrp_paise)}</td>
 
                     <td className="money-column">{formatRupees(product.selling_price_paise)}</td>
@@ -417,6 +416,66 @@ function ItemMaster({
         <span>Enter No Action</span>
         <span>Esc Back</span>
         <span>DELETE Enable/Disable</span>
+      </div>
+
+      <div className="item-master-details">
+        {!selectedProduct ? (
+          <div className="item-master-details-empty">No product selected</div>
+        ) : (
+          <>
+            <div className="item-master-details-title">PRODUCT DETAILS</div>
+
+            <div className="item-master-details-grid">
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Product</span>
+
+                <span className="item-master-detail-value">{selectedProduct.name}</span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Barcode</span>
+
+                <span className="item-master-detail-value">{selectedProduct.barcode || '—'}</span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">MRP</span>
+
+                <span className="item-master-detail-value">
+                  {formatRupees(selectedProduct.mrp_paise)}
+                </span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Selling Rate</span>
+
+                <span className="item-master-detail-value">
+                  {formatRupees(selectedProduct.selling_price_paise)}
+                </span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Stock</span>
+
+                <span className="item-master-detail-value">{selectedProduct.stock_quantity}</span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Low Stock</span>
+
+                <span className="item-master-detail-value">{selectedProduct.low_stock_level}</span>
+              </div>
+
+              <div className="item-master-detail">
+                <span className="item-master-detail-label">Status</span>
+
+                <span className="item-master-detail-value">
+                  {selectedProduct.is_active ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {statusChangeProduct && (

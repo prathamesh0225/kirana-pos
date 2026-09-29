@@ -4,6 +4,7 @@ import './app-shell.css'
 type AppShellProps = {
   activeMenu: string
   onMenuSelect: (menu: string) => void
+  onQuit: () => void
   children: ReactNode
 }
 
@@ -42,7 +43,12 @@ const menuGroups = [
   }
 ]
 
-export function AppShell({ activeMenu, onMenuSelect, children }: AppShellProps): ReactElement {
+export function AppShell({
+  activeMenu,
+  onMenuSelect,
+  onQuit,
+  children
+}: AppShellProps): ReactElement {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -74,11 +80,14 @@ export function AppShell({ activeMenu, onMenuSelect, children }: AppShellProps):
               })}
             </div>
           ))}
+          <button type="button" className="sidebar-item sidebar-item-quit" onClick={onQuit}>
+            <span className="sidebar-item-icon">⏻</span>
+            <span className="sidebar-item-label">Quit Application</span>
+          </button>
         </nav>
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-name">Kirana Mart POS</div>
-          <div className="sidebar-footer-version">Version 0.1.0</div>
         </div>
       </aside>
 

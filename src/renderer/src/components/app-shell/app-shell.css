@@ -157,3 +157,18 @@
   overflow: hidden;
   padding: 20px;
 }
+
+.sidebar-item-quit {
+  margin-top: 8px;
+  border-top: 1px solid #38556d;
+  padding-top: 10px;
+}
+
+.sidebar-item-quit:hover {
+  background: #6b3030;
+}
+
+.sidebar-item-quit:focus {
+  outline: 2px solid #9db8ca;
+  outline-offset: -2px;
+}
