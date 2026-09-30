@@ -1,6 +1,6 @@
 {
   "name": "kirana-pos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Offline-first Kirana Mart POS and inventory management system",
   "main": "./out/main/index.js",
   "author": "Kirana Mart",

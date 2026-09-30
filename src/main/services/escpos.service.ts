@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
-
-const execFileAsync = promisify(execFile)
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 
 const RECEIPT_WIDTH = 48
 
@@ -146,6 +143,7 @@ function mergeReceiptLines(lines: EscPosReceiptLine[]): EscPosReceiptLine[] {
       merged.set(key, {
         ...line
       })
+
       continue
     }
 
@@ -276,7 +274,7 @@ function buildEscPosReceipt(receipt: EscPosReceipt): Buffer {
   }
 
   // Initialize printer
-  push(0x1b, 0x40)
+  // push(0x1b, 0x40)
 
   // Font A
   push(0x1b, 0x4d, 0x00)
@@ -302,22 +300,55 @@ function buildEscPosReceipt(receipt: EscPosReceipt): Buffer {
   return Buffer.from(bytes)
 }
 
-async function sendRawToPrinter(printerName: string, data: Buffer): Promise<void> {
-  const base64 = data.toString('base64')
+// ============================================================
+// PERSISTENT ESC/POS WINDOWS PRINTER WORKER
+// ============================================================
+//
+// IMPORTANT:
+//
+// Old implementation:
+//
+//   Every receipt
+//      -> start powershell.exe
+//      -> Add-Type
+//      -> compile C# P/Invoke
+//      -> print
+//      -> close powershell.exe
+//
+// New implementation:
+//
+//   Kirana starts
+//      -> start powershell.exe
+//      -> Add-Type ONCE
+//      -> worker stays alive
+//
+//   Each receipt
+//      -> send JSON + base64 ESC/POS data
+//      -> WritePrinter
+//
+// This removes the PowerShell/Add-Type startup cost from
+// every receipt.
+//
 
-  const escapedPrinterName = printerName.replace(/'/g, "''")
+let printerWorker: ChildProcessWithoutNullStreams | null = null
 
-  const script = `
-$printerName = '${escapedPrinterName}'
-$base64 = '${base64}'
+let printerWorkerReady: Promise<void> | null = null
 
-Add-Type -TypeDefinition @"
+let printerQueue: Promise<void> = Promise.resolve()
+
+const printerWorkerScript = `
+$ErrorActionPreference = 'Stop'
+
+Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 
-public class RawPrinter
+public static class KiranaRawPrinter
 {
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    [StructLayout(
+        LayoutKind.Sequential,
+        CharSet = CharSet.Unicode
+    )]
     public class DOCINFO
     {
         [MarshalAs(UnmanagedType.LPWStr)]
@@ -399,111 +430,421 @@ public class RawPrinter
         int dwCount,
         out int dwWritten
     );
+
+    public static void Print(
+        string printerName,
+        byte[] data
+    )
+    {
+        IntPtr handle = IntPtr.Zero;
+
+        if (!OpenPrinter(
+            printerName,
+            out handle,
+            IntPtr.Zero
+        ))
+        {
+            int errorCode =
+                Marshal.GetLastWin32Error();
+
+            throw new Exception(
+                "Could not open printer: " +
+                printerName +
+                ". Windows error code: " +
+                errorCode
+            );
+        }
+
+        try
+        {
+            DOCINFO doc = new DOCINFO
+            {
+                pDocName = "Kirana Receipt",
+                pDataType = "RAW"
+            };
+
+            int docResult =
+                StartDocPrinter(
+                    handle,
+                    1,
+                    doc
+                );
+
+            if (docResult == 0)
+            {
+                int errorCode =
+                    Marshal.GetLastWin32Error();
+
+                throw new Exception(
+                    "StartDocPrinter failed. " +
+                    "Windows error code: " +
+                    errorCode
+                );
+            }
+
+            try
+            {
+                if (!StartPagePrinter(handle))
+                {
+                    int errorCode =
+                        Marshal.GetLastWin32Error();
+
+                    throw new Exception(
+                        "StartPagePrinter failed. " +
+                        "Windows error code: " +
+                        errorCode
+                    );
+                }
+
+                try
+                {
+                    IntPtr ptr =
+                        Marshal.AllocHGlobal(
+                            data.Length
+                        );
+
+                    try
+                    {
+                        Marshal.Copy(
+                            data,
+                            0,
+                            ptr,
+                            data.Length
+                        );
+
+                        int written = 0;
+
+                        bool writeResult =
+                            WritePrinter(
+                                handle,
+                                ptr,
+                                data.Length,
+                                out written
+                            );
+
+                        if (!writeResult)
+                        {
+                            int errorCode =
+                                Marshal.GetLastWin32Error();
+
+                            throw new Exception(
+                                "WritePrinter failed. " +
+                                "Windows error code: " +
+                                errorCode
+                            );
+                        }
+
+                        if (written != data.Length)
+                        {
+                            throw new Exception(
+                                "Only " +
+                                written +
+                                " of " +
+                                data.Length +
+                                " bytes were written."
+                            );
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(ptr);
+                    }
+                }
+                finally
+                {
+                    EndPagePrinter(handle);
+                }
+            }
+            finally
+            {
+                EndDocPrinter(handle);
+            }
+        }
+        finally
+        {
+            ClosePrinter(handle);
+        }
+    }
 }
 "@
 
-$handle = [IntPtr]::Zero
+Write-Output "READY"
+[Console]::Out.Flush()
 
-if (-not [RawPrinter]::OpenPrinter(
-    $printerName,
-    [ref]$handle,
-    [IntPtr]::Zero
-)) {
-    $errorCode =
-        [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+while ($true) {
+    $line = [Console]::ReadLine()
 
-    throw "Could not open printer: $printerName. Windows error code: $errorCode"
-}
+    if ($null -eq $line) {
+        break
+    }
 
-try {
-    $doc = New-Object RawPrinter+DOCINFO
-
-    $doc.pDocName = "Kirana Receipt"
-    $doc.pDataType = "RAW"
-
-    $docResult = [RawPrinter]::StartDocPrinter(
-        $handle,
-        1,
-        $doc
-    )
-
-    if ($docResult -eq 0) {
-        $errorCode =
-            [Runtime.InteropServices.Marshal]::GetLastWin32Error()
-
-        throw "StartDocPrinter failed. Windows error code: $errorCode"
+    if ($line -eq "QUIT") {
+        break
     }
 
     try {
-        if (-not [RawPrinter]::StartPagePrinter($handle)) {
-            $errorCode =
-                [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        $request = $line | ConvertFrom-Json
 
-            throw "StartPagePrinter failed. Windows error code: $errorCode"
-        }
+        $printerName = [string]$request.printerName
 
-        try {
-            $data =
-                [Convert]::FromBase64String($base64)
+        $data = [Convert]::FromBase64String(
+            [string]$request.data
+        )
 
-            $ptr =
-                [Runtime.InteropServices.Marshal]::AllocHGlobal(
-                    $data.Length
-                )
+        [KiranaRawPrinter]::Print(
+            $printerName,
+            $data
+        )
 
-            try {
-                [Runtime.InteropServices.Marshal]::Copy(
-                    $data,
-                    0,
-                    $ptr,
-                    $data.Length
-                )
-
-                $written = 0
-
-                $writeResult =
-                    [RawPrinter]::WritePrinter(
-                        $handle,
-                        $ptr,
-                        $data.Length,
-                        [ref]$written
-                    )
-
-                if (-not $writeResult) {
-                    $errorCode =
-                        [Runtime.InteropServices.Marshal]::GetLastWin32Error()
-
-                    throw "WritePrinter failed. Windows error code: $errorCode"
-                }
-
-                if ($written -ne $data.Length) {
-                    throw "Only $written of $($data.Length) bytes were written"
-                }
-            }
-            finally {
-                [Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
-            }
-        }
-        finally {
-            [RawPrinter]::EndPagePrinter($handle)
-        }
+        Write-Output '{"status":"ok"}'
     }
-    finally {
-        [RawPrinter]::EndDocPrinter($handle)
+    catch {
+        $errorMessage =
+            $_.Exception.Message.Replace(
+                [Environment]::NewLine,
+                ' '
+            )
+
+        $response = @{
+            status = "error"
+            message = $errorMessage
+        } | ConvertTo-Json -Compress
+
+        Write-Output $response
     }
-}
-finally {
-    [RawPrinter]::ClosePrinter($handle)
+
+    [Console]::Out.Flush()
 }
 `
 
-  await execFileAsync(
+function startPrinterWorker(): Promise<void> {
+  if (printerWorker && !printerWorker.killed && printerWorkerReady) {
+    return printerWorkerReady
+  }
+
+  printerWorker = spawn(
     'powershell.exe',
-    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      printerWorkerScript
+    ],
     {
-      windowsHide: true
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe']
     }
   )
+
+  const worker = printerWorker
+
+  printerWorkerReady = new Promise<void>((resolve, reject) => {
+    let output = ''
+    let settled = false
+
+    const cleanup = () => {
+      worker.stdout.removeListener('data', onData)
+
+      worker.removeListener('error', onError)
+
+      worker.removeListener('exit', onExit)
+    }
+
+    const fail = (error: Error) => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      cleanup()
+
+      if (printerWorker === worker) {
+        printerWorker = null
+        printerWorkerReady = null
+      }
+
+      reject(error)
+    }
+
+    const onData = (chunk: Buffer) => {
+      output += chunk.toString()
+
+      if (output.includes('READY')) {
+        if (settled) {
+          return
+        }
+
+        settled = true
+        cleanup()
+        resolve()
+      }
+    }
+
+    const onError = (error: Error) => {
+      fail(error)
+    }
+
+    const onExit = (code: number | null) => {
+      if (settled) {
+        return
+      }
+
+      fail(new Error(`Printer worker stopped during startup (code ${code ?? 'unknown'}).`))
+    }
+
+    worker.stdout.on('data', onData)
+    worker.once('error', onError)
+    worker.once('exit', onExit)
+  })
+
+  return printerWorkerReady
+}
+
+function sendRawToPrinterNow(printerName: string, data: Buffer): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const worker = printerWorker
+
+    if (!worker || !worker.stdin) {
+      reject(new Error('Printer worker is not available.'))
+
+      return
+    }
+
+    let output = ''
+
+    const cleanup = () => {
+      worker.stdout.removeListener('data', onData)
+
+      worker.removeListener('error', onError)
+
+      worker.removeListener('exit', onExit)
+    }
+
+    const finishError = (error: Error) => {
+      cleanup()
+      reject(error)
+    }
+
+    const onData = (chunk: Buffer) => {
+      output += chunk.toString()
+
+      const lines = output.split(/\r?\n/)
+
+      // Keep only the incomplete final line.
+      output = lines.pop() ?? ''
+
+      for (const line of lines) {
+        if (!line.trim()) {
+          continue
+        }
+
+        let response: {
+          status?: string
+          message?: string
+        }
+
+        try {
+          response = JSON.parse(line)
+        } catch {
+          continue
+        }
+
+        if (response.status === 'ok') {
+          cleanup()
+          resolve()
+          return
+        }
+
+        if (response.status === 'error') {
+          finishError(new Error(response.message ?? 'Unknown printer error.'))
+
+          return
+        }
+      }
+    }
+
+    const onError = (error: Error) => {
+      finishError(error)
+    }
+
+    const onExit = (code: number | null) => {
+      finishError(new Error(`Printer worker stopped unexpectedly (code ${code ?? 'unknown'}).`))
+    }
+
+    worker.stdout.on('data', onData)
+    worker.once('error', onError)
+    worker.once('exit', onExit)
+
+    try {
+      const request = JSON.stringify({
+        printerName,
+        data: data.toString('base64')
+      })
+
+      worker.stdin.write(request + '\n')
+    } catch (error) {
+      finishError(
+        error instanceof Error ? error : new Error('Unable to send data to printer worker.')
+      )
+    }
+  })
+}
+
+async function sendRawToPrinter(printerName: string, data: Buffer): Promise<void> {
+  /*
+   * Make sure the worker exists before adding the
+   * print operation to the queue.
+   */
+  await startPrinterWorker()
+
+  /*
+   * Serialize all raw printer operations.
+   *
+   * This is important because the worker uses stdout
+   * for its response. Two simultaneous requests must
+   * never compete for the same response.
+   */
+  const operation = printerQueue.then(async () => {
+    await startPrinterWorker()
+
+    return sendRawToPrinterNow(printerName, data)
+  })
+
+  /*
+   * The queue itself must continue after a failed
+   * print, otherwise one printer error would block
+   * every future receipt.
+   */
+  printerQueue = operation.catch(() => undefined)
+
+  return operation
+}
+
+/**
+ * Stop the persistent PowerShell printer worker.
+ *
+ * Call this during application shutdown.
+ */
+export function stopPrinterWorker(): void {
+  const worker = printerWorker
+
+  printerWorker = null
+  printerWorkerReady = null
+
+  if (!worker || worker.killed) {
+    return
+  }
+
+  try {
+    if (worker.stdin) {
+      worker.stdin.write('QUIT\n')
+      worker.stdin.end()
+    }
+  } catch {
+    // Worker may already be stopping.
+  }
 }
 
 export async function printReceipt(printerName: string, receipt: EscPosReceipt): Promise<void> {
