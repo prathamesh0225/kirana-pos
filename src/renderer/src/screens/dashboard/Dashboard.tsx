@@ -11,9 +11,15 @@ type DashboardProps = {
   onOpenItems: () => void
   onOpenBillHistory: () => void
   onOpenSettings: () => void
+  onOpenPurchase: () => void
 }
 
-export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: DashboardProps) {
+export function Dashboard({
+  onOpenBilling,
+  onOpenItems,
+  onOpenBillHistory,
+  onOpenPurchase
+}: DashboardProps) {
   const [salesSummary, setSalesSummary] = useState<DashboardSalesSummary>({
     totalSalesPaise: 0,
     billsToday: 0
@@ -66,6 +72,12 @@ export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: Das
         onOpenBillHistory()
         return
       }
+
+      if (event.key === 'F4') {
+        event.preventDefault()
+        onOpenPurchase()
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -73,7 +85,7 @@ export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: Das
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onOpenBilling, onOpenItems, onOpenBillHistory])
+  }, [onOpenBilling, onOpenItems, onOpenBillHistory, onOpenPurchase])
 
   return (
     <div className="dashboard">

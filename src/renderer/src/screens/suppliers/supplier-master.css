@@ -1,0 +1,411 @@
+/* =========================================================
+   SUPPLIER MASTER
+   ========================================================= */
+
+.supplier-master {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 14px 20px;
+  background: #dce8f0;
+  color: #172b3b;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 20px;
+  overflow: hidden;
+}
+
+/* =========================================================
+   TITLE BAR
+   ========================================================= */
+
+.supplier-master-header {
+  height: 40px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  padding: 0 12px;
+  background: #173f66;
+  color: #ffffff;
+  border: 1px solid #102d48;
+}
+
+.supplier-master-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.supplier-master-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+.supplier-master-search-row {
+  height: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 12px;
+  background: #d7e5ee;
+  border: 1px solid #9aafbd;
+}
+
+.supplier-master-search-row label {
+  color: #173650;
+  font-weight: 700;
+}
+
+.supplier-master-search-row input {
+  width: 420px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border: 1px solid #7f96a6;
+  border-radius: 0;
+  background: #ffffff;
+  color: #172b3b;
+  outline: none;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 14px;
+}
+
+.supplier-master-search-row input:focus {
+  border: 2px solid #173f66;
+}
+
+.supplier-master-search-row select {
+  height: 30px;
+  padding: 2px 8px;
+  border: 1px solid #7f96a6;
+  border-radius: 0;
+  background: #ffffff;
+  color: #172b3b;
+  outline: none;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 14px;
+}
+
+.supplier-master-search-row select:focus {
+  border: 2px solid #173f66;
+}
+
+.supplier-count {
+  margin-left: auto;
+  color: #42596a;
+  font-weight: 600;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.supplier-master-table-wrap {
+  flex: 0 0 54%;
+  min-height: 0;
+  margin: 0 0 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #b5c5cf;
+  scrollbar-width: none;
+}
+
+.supplier-master-table-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.supplier-master-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #ffffff;
+}
+
+.supplier-master-table th {
+  height: 32px;
+  padding: 4px 10px;
+  background: #b9cfdd;
+  color: #173650;
+  border: none;
+  border-bottom: 1px solid #91a8b7;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: left;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.supplier-master-table td {
+  height: 34px;
+  padding: 4px 10px;
+  background: #ffffff;
+  color: #172b3b;
+  border: none;
+  border-bottom: 1px solid #e1e6e9;
+  font-size: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.supplier-master-table tbody tr.selected-row td {
+  background: #172f47;
+  color: #ffffff;
+  border-bottom-color: #172f47;
+}
+
+.supplier-master-table tbody tr:hover td {
+  background: #f3f6f8;
+}
+
+.supplier-master-table tbody tr.selected-row:hover td {
+  background: #172f47;
+  color: #ffffff;
+}
+
+/* =========================================================
+   COLUMNS
+   ========================================================= */
+
+.supplier-select-column {
+  width: 28px;
+  text-align: center !important;
+}
+
+.supplier-master-table th:nth-child(2) {
+  width: 32%;
+}
+
+.supplier-master-table th:nth-child(3) {
+  width: 17%;
+}
+
+.supplier-master-table th:nth-child(4) {
+  width: 22%;
+}
+
+.supplier-master-table th:nth-child(5) {
+  width: 13%;
+}
+
+.supplier-master-table th:nth-child(6) {
+  width: 14%;
+}
+
+.money-column {
+  text-align: right !important;
+}
+
+/* =========================================================
+   TABLE MESSAGE
+   ========================================================= */
+
+.supplier-table-message {
+  height: 100px !important;
+  text-align: center !important;
+  vertical-align: middle;
+  background: #ffffff !important;
+  color: #687985 !important;
+  border: none !important;
+}
+
+.supplier-table-message.error {
+  color: #8b2020 !important;
+}
+
+/* =========================================================
+   DETAILS
+   ========================================================= */
+
+.supplier-master-details {
+  flex: 1;
+  min-height: 0;
+  margin: 0 0 8px;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #b5c5cf;
+  overflow: hidden;
+}
+
+.supplier-master-details-title {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  color: #173650;
+  border-bottom: 1px solid #c4d0d7;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.supplier-master-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 40px;
+  row-gap: 8px;
+  width: 100%;
+}
+
+.supplier-master-detail {
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.supplier-master-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.supplier-master-detail-label {
+  color: #536878;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.supplier-master-detail-value {
+  min-width: 0;
+  color: #172b3b;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.supplier-master-details-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #687985;
+  font-size: 14px;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.supplier-master-footer {
+  height: 30px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin: 0;
+  padding: 0 12px;
+  background: #173f66;
+  color: #ffffff;
+  border: 1px solid #102d48;
+  font-size: 18px;
+  font-weight: 200;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.supplier-form {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.supplier-form-header {
+  height: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: #173f66;
+  color: #ffffff;
+  border: 1px solid #102d48;
+}
+
+.supplier-form-body {
+  width: 700px;
+  margin: 30px auto 0;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #b5c5cf;
+}
+
+.supplier-form-row {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.supplier-form-row label {
+  color: #536878;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.supplier-form-row input,
+.supplier-form-row select {
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border: 1px solid #7f96a6;
+  border-radius: 0;
+  background: #ffffff;
+  color: #172b3b;
+  outline: none;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 15px;
+}
+
+.supplier-form-row input:focus,
+.supplier-form-row select:focus {
+  border: 2px solid #173f66;
+}
+
+.supplier-form-error {
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid #c58d8d;
+  background: #f7eaea;
+  color: #8b2020;
+  font-size: 14px;
+}
+
+.supplier-form-footer {
+  height: 30px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin-top: auto;
+  padding: 0 12px;
+  background: #173f66;
+  color: #ffffff;
+  border: 1px solid #102d48;
+  font-size: 18px;
+  white-space: nowrap;
+}

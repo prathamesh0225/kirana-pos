@@ -1805,7 +1805,7 @@ function Billing({
         <ConfirmDialog
           title="Print Bill"
           message={`Print bill ${displaySession.billNumber}?`}
-          onConfirm={printBill}
+          onConfirm={() => printBill()}
           onCancel={async () => {
             setShowPrintConfirmation(false)
             setPendingPayment(null)

@@ -10,6 +10,9 @@ import { registerBillingIpc } from './ipc/billing.ipc'
 import { registerPrinterIpc } from './ipc/printer.ipc'
 import { registerSettingsIpc } from './ipc/settings.ipc'
 import { stopPrinterWorker } from './services/escpos.service'
+import { registerSupplierIpc } from './ipc/suppliers.ipc'
+import { registerPurchaseIpc } from './ipc/purchase.ipc'
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -55,6 +58,8 @@ app.whenReady().then(async () => {
     registerBillingIpc()
     registerPrinterIpc()
     registerSettingsIpc()
+    registerPurchaseIpc()
+    registerSupplierIpc()
 
     createWindow()
   } catch (error) {

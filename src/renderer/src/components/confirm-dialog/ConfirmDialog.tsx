@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Modal from '../modal/Modal'
 import './confirm-dialog.css'
 
@@ -21,22 +21,41 @@ function ConfirmDialog({
   onConfirm,
   onCancel
 }: ConfirmDialogProps): React.JSX.Element {
-  const confirmRef = useRef<HTMLButtonElement>(null)
+  const [selectedAction, setSelectedAction] = useState<'confirm' | 'cancel'>('confirm')
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    confirmRef.current?.focus()
+    setSelectedAction('confirm')
+
+    const frame = requestAnimationFrame(() => {
+      dialogRef.current?.focus()
+    })
 
     function handleKeyDown(event: KeyboardEvent): void {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+
+      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        setSelectedAction('confirm')
+        return
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        setSelectedAction('cancel')
+        return
+      }
+
       if (event.key === 'Enter') {
-        event.preventDefault()
-        event.stopImmediatePropagation()
-        onConfirm()
+        if (selectedAction === 'confirm') {
+          onConfirm()
+        } else {
+          onCancel()
+        }
+
         return
       }
 
       if (event.key === 'Escape') {
-        event.preventDefault()
-        event.stopImmediatePropagation()
         onCancel()
       }
     }
@@ -44,27 +63,48 @@ function ConfirmDialog({
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      cancelAnimationFrame(frame)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onConfirm, onCancel])
+  }, [onConfirm, onCancel, selectedAction])
 
   return (
     <Modal title={title} onClose={onCancel} initialFocus="none">
-      <div className={`confirm-dialog ${variant === 'warning' ? 'confirm-dialog-warning' : ''}`}>
+      <div
+        ref={dialogRef}
+        className={`confirm-dialog ${variant === 'warning' ? 'confirm-dialog-warning' : ''}`}
+        tabIndex={-1}
+      >
         <div className="confirm-message">{message}</div>
 
         <div className="confirm-actions">
-          <button ref={confirmRef} type="button" className="confirm-primary" onClick={onConfirm}>
+          <button
+            type="button"
+            className={
+              selectedAction === 'confirm' ? 'confirm-primary confirm-selected' : 'confirm-primary'
+            }
+            onClick={onConfirm}
+          >
+            {selectedAction === 'confirm' ? '> ' : ''}
             {confirmText}
           </button>
 
-          <button type="button" className="confirm-secondary" onClick={onCancel}>
+          <button
+            type="button"
+            className={
+              selectedAction === 'cancel'
+                ? 'confirm-secondary confirm-selected'
+                : 'confirm-secondary'
+            }
+            onClick={onCancel}
+          >
+            {selectedAction === 'cancel' ? '> ' : ''}
             {cancelText}
           </button>
         </div>
 
         <div className="confirm-shortcuts">
-          Enter = {confirmText}&nbsp;&nbsp;&nbsp;Esc = {cancelText}
+          ↑↓ Select&nbsp;&nbsp;&nbsp;Enter Confirm&nbsp;&nbsp;&nbsp;Esc Cancel
         </div>
       </div>
     </Modal>

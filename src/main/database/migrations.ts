@@ -331,59 +331,138 @@ const migrations: Migration[] = [
     ALTER TABLE stock_movements
 ADD COLUMN reason TEXT;
     `
+  },
+  {
+    version: 11,
+    name: 'v2_purchase_batch',
+    sql: `
+CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    name TEXT NOT NULL,
+    phone TEXT,
+    address TEXT,
+    gstin TEXT,
+
+    opening_balance_paise INTEGER NOT NULL DEFAULT 0,
+
+    balance_type TEXT NOT NULL DEFAULT 'NONE'
+        CHECK (balance_type IN ('NONE', 'PAYABLE', 'RECEIVABLE')),
+
+    is_active INTEGER NOT NULL DEFAULT 1,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS purchase_invoices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    invoice_number TEXT NOT NULL,
+    supplier_id INTEGER NOT NULL,
+
+    purchase_date TEXT NOT NULL,
+
+    subtotal_paise INTEGER NOT NULL DEFAULT 0,
+    discount_paise INTEGER NOT NULL DEFAULT 0,
+    tax_paise INTEGER NOT NULL DEFAULT 0,
+
+    total_amount_paise INTEGER NOT NULL DEFAULT 0,
+
+    paid_paise INTEGER NOT NULL DEFAULT 0,
+    balance_paise INTEGER NOT NULL DEFAULT 0,
+
+    notes TEXT,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY (supplier_id)
+        REFERENCES suppliers(id)
+);
+
+
+CREATE TABLE IF NOT EXISTS stock_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    product_id INTEGER NOT NULL,
+
+    batch_number TEXT,
+    expiry_date TEXT,
+
+    mrp_paise INTEGER NOT NULL,
+    purchase_rate_paise INTEGER NOT NULL,
+    selling_rate_paise INTEGER NOT NULL,
+
+    quantity REAL NOT NULL DEFAULT 0,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY (product_id)
+        REFERENCES products(id)
+);
+
+
+CREATE TABLE IF NOT EXISTS purchase_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    purchase_invoice_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    batch_id INTEGER NOT NULL,
+
+    mrp_paise INTEGER NOT NULL,
+    purchase_rate_paise INTEGER NOT NULL,
+    selling_rate_paise INTEGER NOT NULL,
+
+    quantity REAL NOT NULL,
+    free_quantity REAL NOT NULL DEFAULT 0,
+
+    amount_paise INTEGER NOT NULL,
+
+    created_at TEXT NOT NULL,
+
+    FOREIGN KEY (purchase_invoice_id)
+        REFERENCES purchase_invoices(id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (product_id)
+        REFERENCES products(id),
+
+    FOREIGN KEY (batch_id)
+        REFERENCES stock_batches(id)
+);
+
+
+ALTER TABLE stock_movements
+ADD COLUMN batch_id INTEGER REFERENCES stock_batches(id);`
+  },
+  {
+    version: 12,
+    name: 'v2_supplier_fields',
+    sql: `
+      ALTER TABLE suppliers
+        ADD COLUMN opening_balance_paise INTEGER NOT NULL DEFAULT 0;
+
+      ALTER TABLE suppliers
+        ADD COLUMN balance_type TEXT NOT NULL DEFAULT 'NONE'
+          CHECK (balance_type IN ('NONE', 'PAYABLE', 'RECEIVABLE'));
+
+      ALTER TABLE suppliers
+        ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
+    `
+  },
+  {
+    version: 13,
+    name: 'purchase_payment_method',
+    sql: `
+    ALTER TABLE purchase_invoices
+      ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'CREDIT'
+        CHECK (payment_method IN ('CASH', 'UPI', 'CREDIT'));
+  `
   }
 ]
-
-// export function runMigrations(): void {
-//   const db = getDatabase()
-
-//   db.exec(`
-//     CREATE TABLE IF NOT EXISTS migrations (
-//       version INTEGER PRIMARY KEY,
-//       name TEXT NOT NULL,
-//       applied_at TEXT NOT NULL
-//     )
-//   `)
-
-//   const getMigration = db.prepare(`
-//     SELECT version
-//     FROM migrations
-//     WHERE version = ?
-//   `)
-
-//   const insertMigration = db.prepare(`
-//     INSERT INTO migrations (
-//       version,
-//       name,
-//       applied_at
-//     )
-//     VALUES (?, ?, ?)
-//   `)
-
-//   const applyMigration = db.transaction((migration: Migration) => {
-//     migration.sql.split(';').forEach((statement) => {
-//       const trimmedStatement = statement.trim()
-
-//       if (trimmedStatement) {
-//         db.exec(trimmedStatement)
-//       }
-//     })
-
-//     insertMigration.run(migration.version, migration.name, new Date().toISOString())
-//   })
-
-//   for (const migration of migrations) {
-//     const existing = getMigration.get(migration.version) as
-//       | {
-//           version: number
-//         }
-//       | undefined
-
-//     if (!existing) {
-//       applyMigration(migration)
-//     }
-//   }
-// }
 
 export async function runMigrations(): Promise<void> {
   const db = getDatabase()

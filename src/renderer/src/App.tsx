@@ -9,7 +9,8 @@ import type { BillingSession } from './screens/billing/billing.types'
 import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
 import { Settings } from './screens/settings/Settings'
 import { QuitBackupScreen } from './components/quit-backup/QuitBackupScreen'
-
+import PurchaseEntry from './screens/purchases/PurchaseEntry'
+import SupplierMaster from './screens/suppliers/SupplierMaster'
 type HistoricalBillMode = 'view' | 'modify'
 
 type Screen =
@@ -44,6 +45,9 @@ type Screen =
       type: 'historical-bill'
       saleId: number
       mode: HistoricalBillMode
+    }
+  | {
+      type: 'purchase-entry'
     }
 
 function createEmptyBillingLine() {
@@ -107,6 +111,8 @@ function App(): React.JSX.Element {
   >(null)
 
   const [quitBackupError, setQuitBackupError] = useState<string | undefined>(undefined)
+
+  const [purchaseSupplier, setPurchaseSupplier] = useState<Supplier | null>(null)
 
   async function handleQuitApplication(): Promise<void> {
     if (quitBackupStatus !== null) {
@@ -240,6 +246,12 @@ function App(): React.JSX.Element {
       case 'settings':
         setScreen({
           type: 'settings'
+        })
+        break
+
+      case 'purchase':
+        setScreen({
+          type: 'purchase-entry'
         })
         break
 
@@ -601,6 +613,28 @@ function App(): React.JSX.Element {
           setScreen({
             type: 'item-master',
             returnTo: screen.returnTo
+          })
+        }}
+      />
+    )
+  }
+
+  /*
+   * =========================================================
+   * PURCHASE ENTRY
+   * =========================================================
+   */
+
+  if (screen.type === 'purchase-entry') {
+    return (
+      <PurchaseEntry
+        supplier={purchaseSupplier}
+        onSupplierSelected={(supplier) => {
+          setPurchaseSupplier(supplier)
+        }}
+        onBack={() => {
+          setScreen({
+            type: 'dashboard'
           })
         }}
       />

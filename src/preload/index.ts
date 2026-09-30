@@ -121,6 +121,10 @@ const api = {
     repairCompletedSlot: () => ipcRenderer.invoke('billing:repairCompletedSlot')
   },
 
+  purchase: {
+    complete: (input: unknown) => ipcRenderer.invoke('purchase:complete', input)
+  },
+
   printer: {
     list: () => ipcRenderer.invoke('printer:list'),
 
@@ -137,6 +141,18 @@ const api = {
 
     setPrinter: (printerName: string | null) =>
       ipcRenderer.invoke('settings:setPrinter', printerName)
+  },
+
+  supplier: {
+    list: (includeInactive?: boolean) => ipcRenderer.invoke('supplier:list', includeInactive),
+
+    get: (id: number) => ipcRenderer.invoke('supplier:get', id),
+
+    create: (data: SupplierInput) => ipcRenderer.invoke('supplier:create', data),
+
+    update: (id: number, data: SupplierInput) => ipcRenderer.invoke('supplier:update', id, data),
+
+    setActive: (id: number, active: boolean) => ipcRenderer.invoke('supplier:setActive', id, active)
   }
 }
 

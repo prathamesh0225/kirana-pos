@@ -16,13 +16,13 @@ const menuGroups = [
       { id: 'billing', label: 'Billing F1', icon: '▤' },
       { id: 'history', label: 'Bill History F2', icon: '▥' },
       { id: 'items', label: 'Items F3', icon: '□' },
-      { id: 'returns', label: 'Returns', icon: '↩' }
+      // { id: 'returns', label: 'Returns', icon: '↩' }
     ]
   },
   {
     title: 'INVENTORY',
     items: [
-      { id: 'purchase', label: 'Purchase', icon: '＋' },
+      { id: 'purchase', label: 'Purchase F4', icon: '＋' },
       { id: 'stock', label: 'Stock', icon: '▦' },
       { id: 'low-stock', label: 'Low Stock', icon: '!' }
     ]

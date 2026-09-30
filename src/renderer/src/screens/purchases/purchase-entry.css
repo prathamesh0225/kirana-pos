@@ -1,0 +1,917 @@
+/* =========================================================
+   PURCHASE ENTRY
+   Old-school ERP / Tally-style layout
+   Fixed 1280x800 friendly
+   Keyboard-first / dense / no animations
+   ========================================================= */
+
+.purchase-entry {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  box-sizing: border-box;
+
+  background: #f4f6f8;
+  color: #111827;
+
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+
+  overflow: hidden;
+}
+
+.purchase-entry *,
+.purchase-entry *::before,
+.purchase-entry *::after {
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   TITLE
+   ========================================================= */
+
+.purchase-title {
+  height: 38px;
+  min-height: 38px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 12px;
+
+  background: #31516b;
+  color: #ffffff;
+
+  border-bottom: 1px solid #1f384b;
+
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.purchase-title > div {
+  line-height: 1;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.purchase-header {
+  height: 76px;
+  min-height: 76px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  column-gap: 32px;
+
+  padding: 8px 12px;
+
+  background: #edf2f5;
+
+  border-bottom: 1px solid #aebdca;
+}
+
+.purchase-header-column {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.purchase-field {
+  min-height: 27px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.purchase-field label {
+  width: 76px;
+  min-width: 76px;
+
+  color: #273746;
+
+  font-weight: bold;
+}
+
+.purchase-field input,
+.purchase-supplier-button {
+  height: 27px;
+
+  border: 1px solid #8da1b1;
+
+  background: #ffffff;
+  color: #111827;
+
+  border-radius: 0;
+
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+}
+
+.purchase-field input {
+  flex: 1;
+  min-width: 0;
+
+  padding: 3px 7px;
+
+  outline: none;
+}
+
+.purchase-field input:focus,
+.purchase-supplier-button:focus {
+  border-color: #31516b;
+  background:#31516b;
+  color: #ffffff;
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
+}
+
+.purchase-supplier-button {
+  flex: 1;
+  min-width: 0;
+
+  padding: 3px 8px;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.purchase-supplier-button:hover {
+  background: #f7fafc;
+}
+
+.purchase-field strong {
+  min-width: 40px;
+
+  padding-left: 3px;
+
+  font-weight: bold;
+}
+
+
+/* =========================================================
+   MAIN GRID AREA
+   ========================================================= */
+
+.purchase-grid-wrapper {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  position: relative;
+
+  overflow: hidden;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.purchase-table {
+  width: 100%;
+
+  table-layout: fixed;
+
+  border-collapse: collapse;
+  border-spacing: 0;
+
+  font-size: 20px;
+}
+
+.purchase-table th {
+  height: 35px;
+
+  padding: 4px 6px;
+
+  background: #dbe5eb;
+  color: #17232d;
+
+  border-right: 1px solid #aebdca;
+  border-bottom: 1px solid #8799a8;
+
+  text-align: left;
+
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.purchase-table td {
+  height: 35px;
+
+  padding: 3px 6px;
+
+  background: #ffffff;
+
+  border-right: 1px solid #d2d9de;
+  border-bottom: 1px solid #d2d9de;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  vertical-align: middle;
+}
+
+
+/* =========================================================
+   COLUMN WIDTHS
+   Total = 100%
+   ========================================================= */
+
+.purchase-table th:nth-child(1),
+.purchase-table td:nth-child(1) {
+  width: 28%;
+}
+
+.purchase-table th:nth-child(2),
+.purchase-table td:nth-child(2) {
+  width: 8%;
+}
+
+.purchase-table th:nth-child(3),
+.purchase-table td:nth-child(3) {
+  width: 9%;
+}
+
+.purchase-table th:nth-child(4),
+.purchase-table td:nth-child(4) {
+  width: 9%;
+}
+
+.purchase-table th:nth-child(5),
+.purchase-table td:nth-child(5) {
+  width: 7%;
+}
+
+.purchase-table th:nth-child(6),
+.purchase-table td:nth-child(6) {
+  width: 7%;
+}
+
+.purchase-table th:nth-child(7),
+.purchase-table td:nth-child(7) {
+  width: 11%;
+}
+
+.purchase-table th:nth-child(8),
+.purchase-table td:nth-child(8) {
+  width: 11%;
+}
+
+.purchase-table th:nth-child(9),
+.purchase-table td:nth-child(9) {
+  width: 10%;
+}
+
+
+/* =========================================================
+   PRODUCT COLUMN
+   ========================================================= */
+
+.product-column {
+  text-align: left;
+}
+
+.purchase-table td.product-column {
+  padding-left: 8px;
+}
+
+.purchase-table td.product-column span {
+  display: block;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   NUMBER COLUMNS
+   ========================================================= */
+
+.number-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-cell {
+  font-weight: bold;
+}
+
+
+/* =========================================================
+   SCROLL AREA
+   ========================================================= */
+
+.purchase-items-scroll {
+  flex: 1;
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scrollbar-width: auto;
+}
+
+.purchase-items-scroll .purchase-table {
+  width: 100%;
+}
+
+
+/* =========================================================
+   SELECTED ROW
+   IMPORTANT:
+   This is the class used by PurchaseEntry.tsx
+   ========================================================= */
+
+.purchase-table tbody tr.purchase-row-selected td {
+  background: #d9eaf6;
+
+  border-top: 1px solid #31516b;
+  border-bottom: 1px solid #31516b;
+
+  color: #111827;
+}
+
+.purchase-table tbody tr.purchase-row-selected td:first-child {
+  border-left: 3px solid #31516b;
+}
+
+
+/* Keep selected row visible even when inputs are active. */
+
+.purchase-table tbody tr.purchase-row-selected
+  .purchase-number-input,
+.purchase-table tbody tr.purchase-row-selected
+  .purchase-text-input,
+.purchase-table tbody tr.purchase-row-selected
+  .purchase-product-entry input {
+  background: #ffffff;
+  color: #111827;
+}
+
+
+/* =========================================================
+   EMPTY ROWS
+   ========================================================= */
+
+.purchase-table tbody tr.empty-row td {
+  height: 29px;
+
+  background: #ffffff;
+
+  color: transparent;
+}
+
+
+/* =========================================================
+   PRODUCT ENTRY / BARCODE INPUT
+   ========================================================= */
+
+.purchase-product-entry {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+}
+
+.purchase-product-entry input {
+  width: 100%;
+  height: 24px;
+
+  padding: 2px 6px;
+
+  border: 1px solid #31516b;
+
+  border-radius: 0;
+
+  background: #ffffff;
+  color: #111827;
+
+  font-family: "Courier New", monospace;
+  font-size: 20px;
+
+  outline: none;
+}
+
+.purchase-product-entry input:focus {
+  border-color: #31516b;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
+}
+
+.purchase-product-entry input::placeholder {
+  color: #7a8791;
+}
+
+
+/* =========================================================
+   NUMBER INPUTS
+   ========================================================= */
+
+.purchase-number-input {
+  width: 100%;
+  height: 23px;
+
+  padding: 1px 5px;
+
+  border: 1px solid #31516b;
+
+  border-radius: 0;
+
+  background: #ffffff;
+  color: #111827;
+
+  font-family: "Courier New", monospace;
+  font-size: 20px;
+
+  text-align: right;
+
+  outline: none;
+}
+
+.purchase-number-input:focus {
+  border-color: #31516b;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
+}
+
+
+/* =========================================================
+   TEXT INPUTS
+   Batch / Expiry
+   ========================================================= */
+
+.purchase-text-input {
+  width: 100%;
+  height: 23px;
+
+  padding: 1px 5px;
+
+  border: 1px solid #31516b;
+
+  border-radius: 0;
+
+  background: #ffffff;
+  color: #111827;
+
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+
+  outline: none;
+}
+
+.purchase-text-input:focus {
+  border-color: #31516b;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
+}
+
+.purchase-text-input::placeholder {
+  color: #7a8791;
+}
+
+
+/* =========================================================
+   PRODUCT NOT FOUND
+   ========================================================= */
+
+.purchase-not-found {
+  position: absolute;
+
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+
+  padding: 6px 9px;
+
+  border: 1px solid #c68b8b;
+
+  background: #fff0f0;
+  color: #8b0000;
+
+  font-size: 13px;
+
+  z-index: 5;
+}
+
+
+/* =========================================================
+   SAVE / ERROR MESSAGE
+   ========================================================= */
+
+.purchase-error {
+  position: absolute;
+
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+
+  padding: 6px 9px;
+
+  border: 1px solid #c68b8b;
+
+  background: #fff0f0;
+  color: #8b0000;
+
+  font-size: 13px;
+
+  z-index: 6;
+}
+
+
+/* =========================================================
+   FOOTER SHORTCUT BAR
+   ========================================================= */
+
+.purchase-footer {
+  height: 32px;
+  min-height: 32px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 0;
+
+  padding: 0 8px;
+
+  background: #dbe5eb;
+
+  border-top: 1px solid #8799a8;
+  border-bottom: 1px solid #aebdca;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+}
+
+.purchase-footer span {
+  display: inline-flex;
+  align-items: center;
+
+  height: 20px;
+
+  padding: 0 10px;
+
+  border-right: 1px solid #aebdca;
+
+  color: #273746;
+
+  font-size: 18px;
+}
+
+.purchase-footer span:first-child {
+  padding-left: 4px;
+}
+
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.purchase-summary {
+  height: 50px;
+  min-height: 50px;
+
+  display: flex;
+  align-items: stretch;
+
+  background: #edf2f5;
+
+  border-top: 1px solid #8799a8;
+}
+
+.purchase-summary > div {
+  min-width: 110px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 12px;
+
+  border-right: 1px solid #c0ccd5;
+}
+
+.purchase-summary span {
+  color: #5c6b76;
+
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.purchase-summary strong {
+  margin-top: 2px;
+
+  color: #111827;
+
+  font-size: 16px;
+  font-weight: bold;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-summary .purchase-total {
+  margin-left: auto;
+
+  min-width: 180px;
+
+  align-items: flex-end;
+  padding-right: 18px;
+  border-right: none;
+}
+
+.purchase-summary .purchase-total span {
+  font-size: 18px;
+}
+
+.purchase-summary .purchase-total strong {
+  font-size: 24px;
+}
+
+
+/* =========================================================
+   PAYMENT SCREEN
+   ========================================================= */
+
+.purchase-entry
+  .purchase-title + div {
+  min-height: 0;
+}
+
+
+/* =========================================================
+   INPUT / BUTTON NORMALIZATION
+   ========================================================= */
+
+.purchase-entry button,
+.purchase-entry input {
+  font-family: "Courier New", monospace;
+}
+
+.purchase-entry button {
+  border-radius: 0;
+}
+
+
+/* =========================================================
+   DATE INPUT
+   ========================================================= */
+
+.purchase-entry input[type="date"] {
+  font-family: "Courier New", monospace;
+}
+
+.purchase-entry input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   Windows desktop / old ERP style
+   ========================================================= */
+
+.purchase-items-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+
+.purchase-items-scroll::-webkit-scrollbar-track {
+  background: #e4e9ed;
+}
+
+.purchase-items-scroll::-webkit-scrollbar-thumb {
+  background: #9aaab6;
+
+  border: 2px solid #e4e9ed;
+}
+
+.purchase-items-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7f929f;
+}
+
+
+/* =========================================================
+   SMALL HEIGHT SAFETY
+   ========================================================= */
+
+@media (max-height: 700px) {
+  .purchase-title {
+    height: 34px;
+    min-height: 34px;
+
+    font-size: 16px;
+  }
+
+  .purchase-header {
+    height: 68px;
+    min-height: 68px;
+
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .purchase-footer {
+    height: 29px;
+    min-height: 29px;
+  }
+
+  .purchase-summary {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .purchase-table th {
+    height: 26px;
+  }
+
+  .purchase-table td {
+    height: 26px;
+  }
+
+  .purchase-table tbody tr.empty-row td {
+    height: 26px;
+  }
+}
+
+.purchase-entry {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.purchase-header {
+  flex: 0 0 auto;
+}
+
+.purchase-grid-wrapper {
+  flex: 1 1 46%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.purchase-items-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.purchase-bottom-panel {
+  flex: 0 0 31%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #888;
+  overflow: hidden;
+}
+
+.purchase-product-details,
+.purchase-summary-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #999;
+  overflow: hidden;
+}
+
+.purchase-section-title {
+  height: 26px;
+  line-height: 26px;
+  padding: 0 8px;
+  font-weight: bold;
+  background: #e6e6e6;
+  border-bottom: 1px solid #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.purchase-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.purchase-comparison-table th,
+.purchase-comparison-table td {
+  height: 28px;
+  padding: 3px 8px;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.purchase-comparison-table th:first-child,
+.purchase-comparison-table td:first-child {
+  width: 70px;
+  text-align: left;
+}
+
+.purchase-comparison-table th {
+  background: #f0f0f0;
+  font-weight: bold;
+}
+
+.comparison-label {
+  font-weight: bold;
+}
+
+.comparison-new-row {
+  font-weight: bold;
+}
+
+.comparison-change-row {
+  font-weight: bold;
+  background: #f7f7f7;
+}
+
+.purchase-no-selection {
+  padding: 15px;
+  color: #666;
+}
+
+.purchase-summary-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.purchase-summary-row {
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  padding: 0 8px;
+  gap: 8px;
+  border-bottom: 1px solid #ccc;
+}
+
+.purchase-summary-row > span {
+  font-weight: bold;
+}
+
+.purchase-summary-row > strong {
+  text-align: right;
+}
+
+.purchase-summary-input {
+  width: 100%;
+  height: 25px;
+  box-sizing: border-box;
+  border: 1px solid #888;
+  padding: 2px 6px;
+  text-align: right;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.purchase-summary-total {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  margin-top: auto;
+  padding: 0 8px;
+  background: #e6e6e6;
+  font-weight: bold;
+}
+
+.purchase-summary-total strong {
+  text-align: right;
+  font-size: 16px;
+}

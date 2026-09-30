@@ -62,7 +62,42 @@ type StockMovementRecord = {
   reason: string | null
 }
 
+type Supplier = {
+  id: number
+  name: string
+  mobile: string | null
+  address: string | null
+  gstin: string | null
+  openingBalancePaise: number
+  balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+type SupplierInput = {
+  name: string
+  mobile?: string
+  address?: string
+  gstin?: string
+  openingBalancePaise?: number
+  balanceType?: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
+}
+
 declare global {
+  type Supplier = {
+    id: number
+    name: string
+    mobile: string | null
+    address: string | null
+    gstin: string | null
+    openingBalancePaise: number
+    balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }
+
   interface Window {
     electron: ElectronAPI
 
@@ -266,6 +301,40 @@ declare global {
         repairCompletedSlot: () => Promise<string>
       }
 
+      purchase: {
+        complete: (input: {
+          supplierId: number
+          invoiceNumber: string
+          purchaseDate: string
+
+          subtotalPaise: number
+          taxPaise: number
+          discountPaise: number
+          totalAmountPaise: number
+
+          paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
+          paidPaise: number
+
+          lines: Array<{
+            productId: number
+            mrpPaise: number
+            purchaseRatePaise: number
+            sellingRatePaise: number
+            quantity: number
+            freeQuantity: number
+            batchNumber: string | null
+            expiryDate: string | null
+          }>
+        }) => Promise<{
+          purchaseId: number
+          invoiceNumber: string
+          totalAmountPaise: number
+          paidPaise: number
+          balancePaise: number
+          paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
+        }>
+      }
+
       printer: {
         list: () => Promise<PrinterInfo[]>
 
@@ -284,6 +353,14 @@ declare global {
         setPrinter: (printerName: string | null) => Promise<{
           printerName: string | null
         }>
+      }
+
+      supplier: {
+        list: (includeInactive?: boolean) => Promise<Supplier[]>
+        get: (id: number) => Promise<Supplier | null>
+        create: (data: SupplierInput) => Promise<Supplier>
+        update: (id: number, data: SupplierInput) => Promise<Supplier>
+        setActive: (id: number, active: boolean) => Promise<void>
       }
     }
   }
