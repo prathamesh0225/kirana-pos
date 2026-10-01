@@ -1,3 +1,4 @@
+//preload/index.ts
 import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
@@ -122,7 +123,14 @@ const api = {
   },
 
   purchase: {
-    complete: (input: unknown) => ipcRenderer.invoke('purchase:complete', input)
+    complete: (input: unknown) => ipcRenderer.invoke('purchase:complete', input),
+
+    list: (limit?: number) => ipcRenderer.invoke('purchase:list', limit),
+
+    get: (purchaseId: number) => ipcRenderer.invoke('purchase:get', purchaseId),
+
+    update: (purchaseId: number, input: unknown) =>
+      ipcRenderer.invoke('purchase:update', purchaseId, input)
   },
 
   printer: {

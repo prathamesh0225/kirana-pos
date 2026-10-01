@@ -1,3 +1,4 @@
+//App.tsx
 import { useEffect, useState } from 'react'
 import Billing from './screens/billing/Billing'
 import ItemMaster from './screens/products/ItemMaster'
@@ -10,7 +11,8 @@ import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
 import { Settings } from './screens/settings/Settings'
 import { QuitBackupScreen } from './components/quit-backup/QuitBackupScreen'
 import PurchaseEntry from './screens/purchases/PurchaseEntry'
-import SupplierMaster from './screens/suppliers/SupplierMaster'
+import PurchaseHistory from './screens/purchases/PurchaseHistory'
+
 type HistoricalBillMode = 'view' | 'modify'
 
 type Screen =
@@ -48,6 +50,10 @@ type Screen =
     }
   | {
       type: 'purchase-entry'
+      purchaseId?: number
+    }
+  | {
+      type: 'purchase-history'
     }
 
 function createEmptyBillingLine() {
@@ -250,6 +256,8 @@ function App(): React.JSX.Element {
         break
 
       case 'purchase':
+        setPurchaseSupplier(null)
+
         setScreen({
           type: 'purchase-entry'
         })
@@ -304,6 +312,12 @@ function App(): React.JSX.Element {
     })
   }
 
+  function handleOpenPurchaseHistory(): void {
+    setScreen({
+      type: 'purchase-history'
+    })
+  }
+
   /*
    * Return from historical bill to Bill History.
    */
@@ -354,12 +368,12 @@ function App(): React.JSX.Element {
                 returnTo: 'dashboard'
               })
             }}
-            onOpenBillHistory={() =>
+            onOpenBillHistory={() => {
               setScreen({
                 type: 'bill-history',
                 returnTo: 'dashboard'
               })
-            }
+            }}
             onOpenSettings={() => {
               setScreen({
                 type: 'settings'
@@ -619,6 +633,48 @@ function App(): React.JSX.Element {
     )
   }
 
+  if (screen.type === 'purchase-history') {
+    return (
+      <PurchaseHistory
+        onBack={() => {
+          setScreen({
+            type: 'purchase-entry'
+          })
+        }}
+        onModifyPurchase={async (purchaseId) => {
+          try {
+            console.log('MODIFY PURCHASE:', purchaseId)
+
+            const purchase = await window.kirana.purchase.get(purchaseId)
+
+            if (!purchase) {
+              console.error('Purchase not found:', purchaseId)
+              return
+            }
+
+            console.log('PURCHASE LOADED:', purchase)
+
+            const supplier = await window.kirana.supplier.get(purchase.supplierId)
+
+            if (!supplier) {
+              console.error('Supplier not found:', purchase.supplierId)
+              return
+            }
+
+            setPurchaseSupplier(supplier)
+
+            setScreen({
+              type: 'purchase-entry',
+              purchaseId: purchase.id
+            })
+          } catch (error) {
+            console.error('Unable to modify purchase:', error)
+          }
+        }}
+      />
+    )
+  }
+
   /*
    * =========================================================
    * PURCHASE ENTRY
@@ -629,10 +685,18 @@ function App(): React.JSX.Element {
     return (
       <PurchaseEntry
         supplier={purchaseSupplier}
+        purchaseId={screen.purchaseId}
         onSupplierSelected={(supplier) => {
           setPurchaseSupplier(supplier)
         }}
+        onOpenHistory={() => {
+          setScreen({
+            type: 'purchase-history'
+          })
+        }}
         onBack={() => {
+          setPurchaseSupplier(null)
+
           setScreen({
             type: 'dashboard'
           })

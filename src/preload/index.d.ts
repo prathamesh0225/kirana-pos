@@ -302,30 +302,67 @@ declare global {
       }
 
       purchase: {
-        complete: (input: {
-          supplierId: number
+        complete: (input: unknown) => Promise<{
+          purchaseId: number
+          invoiceNumber: string
+          totalAmountPaise: number
+          paidPaise: number
+          balancePaise: number
+          paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
+        }>
+
+        list: (limit?: number) => Promise<
+          Array<{
+            id: number
+            invoiceNumber: string
+            purchaseDate: string
+            supplierId: number
+            supplierName: string
+            subtotalPaise: number
+            discountPaise: number
+            taxPaise: number
+            totalAmountPaise: number
+            paidPaise: number
+            balancePaise: number
+            paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
+          }>
+        >
+
+        get: (purchaseId: number) => Promise<{
+          id: number
           invoiceNumber: string
           purchaseDate: string
-
+          supplierId: number
+          supplierName: string
           subtotalPaise: number
-          taxPaise: number
           discountPaise: number
+          taxPaise: number
           totalAmountPaise: number
-
-          paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
           paidPaise: number
+          balancePaise: number
+          paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
 
           lines: Array<{
+            id: number
             productId: number
+            productName: string
+            barcode: string | null
+            batchId: number
+            batchNumber: string | null
+            expiryDate: string | null
             mrpPaise: number
             purchaseRatePaise: number
             sellingRatePaise: number
             quantity: number
             freeQuantity: number
-            batchNumber: string | null
-            expiryDate: string | null
+            amountPaise: number
           }>
-        }) => Promise<{
+        } | null>
+
+        update: (
+          purchaseId: number,
+          input: unknown
+        ) => Promise<{
           purchaseId: number
           invoiceNumber: string
           totalAmountPaise: number

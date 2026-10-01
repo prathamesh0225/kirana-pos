@@ -1,3 +1,4 @@
+//PurchaseEntry.tsx
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './purchase-entry.css'
 import ItemMaster from '../products/ItemMaster'
@@ -6,8 +7,10 @@ import ConfirmationDialog from '../../components/confirm-dialog/ConfirmDialog'
 
 type PurchaseEntryProps = {
   supplier: Supplier | null
+  purchaseId?: number
   onSupplierSelected: (supplier: Supplier) => void
   onBack: () => void
+  onOpenHistory: () => void
 }
 
 type PurchaseField =
@@ -34,6 +37,7 @@ type PurchaseLine = {
 
   // OLD values from Product Master
   oldMrpPaise: number
+  oldPurchaseRatePaise: number
   oldSellingRatePaise: number
 
   // NEW values for this purchase
@@ -59,6 +63,7 @@ function createEmptyLine(): PurchaseLine {
     quantityPrecision: 0,
 
     oldMrpPaise: 0,
+    oldPurchaseRatePaise: 0,
     oldSellingRatePaise: 0,
 
     mrpPaise: 0,
@@ -93,15 +98,15 @@ function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-function formatSignedPercent(value: number): string {
-  if (Math.abs(value) < 0.005) {
-    return '—'
-  }
+// function formatSignedPercent(value: number): string {
+//   if (Math.abs(value) < 0.005) {
+//     return '—'
+//   }
 
-  const sign = value > 0 ? '+' : '-'
+//   const sign = value > 0 ? '+' : '-'
 
-  return `${sign}${Math.abs(value).toFixed(2)}%`
-}
+//   return `${sign}${Math.abs(value).toFixed(2)}%`
+// }
 
 function calculateAmount(quantity: number, purchaseRatePaise: number): number {
   if (!Number.isFinite(quantity) || quantity < 0) {
@@ -176,14 +181,17 @@ function parseDisplayDate(value: string): string | null {
 
 export default function PurchaseEntry({
   supplier,
+  purchaseId,
   onSupplierSelected,
-  onBack
+  onBack,
+  onOpenHistory
 }: PurchaseEntryProps): React.JSX.Element {
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(todayIso)
   const [invoiceDateInput, setInvoiceDateInput] = useState(() => formatDisplayDate(todayIso()))
 
   const [lines, setLines] = useState<PurchaseLine[]>([createEmptyLine()])
+  const [loadingPurchase, setLoadingPurchase] = useState(false)
 
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -225,7 +233,6 @@ export default function PurchaseEntry({
   const [finalizeStep, setFinalizeStep] = useState<'TAX' | 'DISCOUNT' | 'PAYMENT' | null>(null)
 
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false)
-  const [leaveConfirmationChoice, setLeaveConfirmationChoice] = useState<'YES' | 'NO'>('YES')
 
   const taxInputRef = useRef<HTMLInputElement>(null)
   const discountInputRef = useRef<HTMLInputElement>(null)
@@ -392,6 +399,88 @@ export default function PurchaseEntry({
   ])
 
   useEffect(() => {
+    if (!purchaseId) {
+      return
+    }
+
+    let cancelled = false
+
+    async function loadPurchase(): Promise<void> {
+      try {
+        const purchase = await window.kirana.purchase.get(purchaseId)
+
+        if (!purchase) {
+          console.error('Purchase not found:', purchaseId)
+          return
+        }
+
+        if (cancelled) {
+          return
+        }
+
+        /*
+         * Load invoice information
+         */
+        setInvoiceNumber(purchase.invoiceNumber)
+        setInvoiceDate(purchase.purchaseDate)
+        setInvoiceDateInput(formatDisplayDate(purchase.purchaseDate))
+
+        /*
+         * Load payment information
+         */
+        setPaymentMethod(purchase.paymentMethod)
+
+        /*
+         * Load tax / discount
+         */
+        setTaxInput(String(purchase.taxPaise / 100))
+        setDiscountInput(String(purchase.discountPaise / 100))
+
+        /*
+         * Load purchase lines
+         */
+        const loadedLines: PurchaseLine[] = purchase.lines.map((line) => ({
+          id: line.id,
+
+          productId: line.productId,
+          productName: line.productName,
+          barcode: line.barcode,
+
+          quantityPrecision: 0,
+
+          oldMrpPaise: line.mrpPaise,
+          oldPurchaseRatePaise: line.purchaseRatePaise,
+          oldSellingRatePaise: line.sellingRatePaise,
+
+          mrpPaise: line.mrpPaise,
+          purchaseRatePaise: line.purchaseRatePaise,
+          sellingRatePaise: line.sellingRatePaise,
+
+          quantity: line.quantity,
+          freeQuantity: line.freeQuantity,
+
+          batchNumber: line.batchNumber ?? '',
+          expiryDate: line.expiryDate ?? '',
+
+          amountPaise: line.amountPaise
+        }))
+
+        setLines([...loadedLines, createEmptyLine()])
+
+        setSelectedIndex(0)
+      } catch (error) {
+        console.error('Unable to load purchase:', error)
+      }
+    }
+
+    void loadPurchase()
+
+    return () => {
+      cancelled = true
+    }
+  }, [purchaseId])
+
+  useEffect(() => {
     if (!showPayment) {
       return
     }
@@ -522,7 +611,7 @@ export default function PurchaseEntry({
 
       // NEW purchase values
       mrpPaise: product.mrp_paise,
-      purchaseRatePaise: 0,
+      purchaseRatePaise: product.purchase_price_paise,
       sellingRatePaise: product.selling_price_paise,
 
       quantity: 1,
@@ -596,42 +685,6 @@ export default function PurchaseEntry({
    * Current edit value
    * ---------------------------------------------------------
    */
-
-  function getCurrentEditValue(): string {
-    if (!selectedLine) {
-      return ''
-    }
-
-    switch (activeField) {
-      case 'mrp':
-        return selectedLine.mrpPaise === 0 ? '' : (selectedLine.mrpPaise / 100).toString()
-
-      case 'purchase':
-        return selectedLine.purchaseRatePaise === 0
-          ? ''
-          : (selectedLine.purchaseRatePaise / 100).toString()
-
-      case 'selling':
-        return selectedLine.sellingRatePaise === 0
-          ? ''
-          : (selectedLine.sellingRatePaise / 100).toString()
-
-      case 'quantity':
-        return selectedLine.quantity === 0 ? '' : String(selectedLine.quantity)
-
-      case 'free':
-        return selectedLine.freeQuantity === 0 ? '' : String(selectedLine.freeQuantity)
-
-      case 'batch':
-        return selectedLine.batchNumber
-
-      case 'expiry':
-        return selectedLine.expiryDate
-
-      default:
-        return ''
-    }
-  }
 
   /*
    * ---------------------------------------------------------
@@ -931,19 +984,7 @@ export default function PurchaseEntry({
       onBack()
       return
     }
-
-    setLeaveConfirmationChoice('YES')
     setShowLeaveConfirmation(true)
-  }
-
-  const handleLeaveConfirmed = () => {
-    setShowLeaveConfirmation(false)
-    setFinalizeStep(null)
-    onBack()
-  }
-
-  const handleLeaveCancelled = () => {
-    setShowLeaveConfirmation(false)
   }
 
   /*
@@ -1029,6 +1070,8 @@ export default function PurchaseEntry({
         event.stopPropagation()
 
         setFinalizeStep(null)
+
+        onOpenHistory()
 
         return
       }
@@ -1292,22 +1335,22 @@ export default function PurchaseEntry({
    * ---------------------------------------------------------
    */
 
-  function openPayment(): void {
-    if (saving) {
-      return
-    }
+  //   function openPayment(): void {
+  //     if (saving) {
+  //       return
+  //     }
 
-    const validationError = validatePurchase()
+  //     const validationError = validatePurchase()
 
-    if (validationError) {
-      setSaveMessage(validationError)
-      return
-    }
+  //     if (validationError) {
+  //       setSaveMessage(validationError)
+  //       return
+  //     }
 
-    setSaveMessage('')
-    setPaymentMethod('CASH')
-    setShowPayment(true)
-  }
+  //     setSaveMessage('')
+  //     setPaymentMethod('CASH')
+  //     setShowPayment(true)
+  //   }
 
   async function savePurchase(): Promise<void> {
     if (saving) {
@@ -1338,7 +1381,7 @@ export default function PurchaseEntry({
        * the supplied existing purchase IPC contract was not
        * shown to accept them.
        */
-      await window.kirana.purchase.complete({
+      const payload = {
         supplierId: supplier.id,
 
         invoiceNumber: invoiceNumber.trim(),
@@ -1361,20 +1404,24 @@ export default function PurchaseEntry({
           productId: line.productId as number,
 
           mrpPaise: line.mrpPaise,
-
           purchaseRatePaise: line.purchaseRatePaise,
-
           sellingRatePaise: line.sellingRatePaise,
 
           quantity: line.quantity,
-
           freeQuantity: line.freeQuantity,
 
-          batchNumber: line.batchNumber.trim() || null,
+          amountPaise: calculateAmount(line.quantity, line.purchaseRatePaise),
 
+          batchNumber: line.batchNumber.trim() || null,
           expiryDate: line.expiryDate.trim() || null
         }))
-      })
+      }
+
+      if (purchaseId) {
+        await window.kirana.purchase.update(purchaseId, payload)
+      } else {
+        await window.kirana.purchase.complete(payload)
+      }
 
       setShowPayment(false)
       setFinalizeStep(null)
