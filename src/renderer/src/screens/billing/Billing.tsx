@@ -6,6 +6,7 @@ import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
 import type { BillingLine, BillingSession, BillingMode } from './billing.types'
 import Payment, { type PaymentResult } from './Payment'
 import ErrorDialog from '../../components/error-dialog/ErrorDialog'
+import BatchSelector, { type BatchRecord } from './BatchSelector'
 
 type BillingProps = {
   session: BillingSession
@@ -37,6 +38,10 @@ function createEmptyLine(): BillingLine {
     productName: '',
     isTemporary: false,
     barcode: null,
+    batchId: null,
+    batchNumber: null,
+    expiryDate: null,
+    batchQuantity: 0,
     quantityPrecision: 0,
     mrpPaise: 0,
     quantity: 0,
@@ -71,6 +76,12 @@ function createBillingSessionFromSale(sale: {
     productId: number | null
     productName: string
     barcode: string | null
+
+    batchId?: number | null
+    batchNumber?: string | null
+    expiryDate?: string | null
+    batchQuantity?: number
+
     mrpPaise: number
     quantity: number
     freeQuantity: number
@@ -91,6 +102,12 @@ function createBillingSessionFromSale(sale: {
         productName: item.productName,
         isTemporary: item.productId === null,
         barcode: item.barcode,
+
+        batchId: item.batchId ?? null,
+        batchNumber: item.batchNumber ?? null,
+        expiryDate: item.expiryDate ?? null,
+        batchQuantity: item.batchQuantity ?? 0,
+
         quantityPrecision: item.quantityPrecision ?? 3,
         mrpPaise: item.mrpPaise,
         quantity: item.quantity,
@@ -129,6 +146,11 @@ function Billing({
 
   const [showItemSelector, setShowItemSelector] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+
+  const [showBatchSelector, setShowBatchSelector] = useState(false)
+  const [batchSelectorProduct, setBatchSelectorProduct] = useState<ProductRecord | null>(null)
+  const [availableBatches, setAvailableBatches] = useState<BatchRecord[]>([])
+  const [, setIsLoadingBatches] = useState(false)
 
   const [pendingPayment, setPendingPayment] = useState<PaymentResult | null>(null)
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false)
@@ -789,32 +811,39 @@ function Billing({
     }
   }
 
-  /*
-   * ---------------------------------------------------------
-   * Add normal product
-   * ---------------------------------------------------------
-   */
-
-  function addProductToBottomRow(product: ProductRecord): void {
+  function addProductLine(product: ProductRecord, batch: BatchRecord | null): void {
     if (isReadOnly) {
       return
     }
 
+    const bottomIndex = lines.length - 1
+
+    const mrpPaise = batch?.mrpPaise ?? product.mrp_paise
+    const ratePaise = batch?.sellingRatePaise ?? product.selling_price_paise
+
     const newProductLine: BillingLine = {
       id: Date.now() + Math.random(),
+
       productId: product.id,
       productName: product.name,
       isTemporary: false,
-      barcode: product.barcode,
+
+      barcode: product.barcode ?? null,
+
+      batchId: batch?.id ?? null,
+      batchNumber: batch?.batchNumber ?? null,
+      expiryDate: null,
+      batchQuantity: batch?.quantity ?? product.stock_quantity,
+
       quantityPrecision: product.quantity_precision,
-      mrpPaise: product.mrp_paise,
+
+      mrpPaise,
       quantity: 1,
       freeQuantity: 0,
-      ratePaise: product.selling_price_paise,
-      amountPaise: product.selling_price_paise
-    }
 
-    const bottomIndex = lines.length - 1
+      ratePaise,
+      amountPaise: calculateAmount(1, ratePaise)
+    }
 
     updateCurrentSession((currentSession) => {
       const currentBottomIndex = currentSession.lines.length - 1
@@ -829,20 +858,67 @@ function Billing({
       }
     })
 
-    /*
-     * IMPORTANT:
-     * Clear previous barcode so the new blank row is actually blank.
-     */
     setBarcodeInput('')
     setBarcodeNotFound(false)
+    setRateInput('')
 
-    /*
-     * Product was added with QTY = 1.
-     * Go directly to the next blank row.
-     */
     setSelectedIndex(bottomIndex + 1)
     setActiveField('product')
-    setRateInput('')
+  }
+  /*
+   * ---------------------------------------------------------
+   * Add normal product
+   * ---------------------------------------------------------
+   */
+
+  async function addProductToBottomRow(product: ProductRecord): Promise<void> {
+    if (isReadOnly) {
+      return
+    }
+
+    try {
+      setIsLoadingBatches(true)
+
+      const batches = await window.kirana.billing.getAvailableBatches(product.id)
+
+      /*
+       * No batches:
+       *
+       * Keep the existing billing behavior.
+       * Product stock comes from Item Master/products.stock_quantity.
+       */
+      if (!batches || batches.length === 0) {
+        addProductLine(product, null)
+        return
+      }
+
+      // Exactly one batch:
+      // Automatically use it.
+      if (batches.length === 1) {
+        addProductLine(product, batches[0])
+        return
+      }
+
+      // Multiple batches:
+      // Let cashier choose manually.
+      setBatchSelectorProduct(product)
+      setAvailableBatches(batches)
+      setShowBatchSelector(true)
+
+      setBarcodeInput('')
+      setBarcodeNotFound(false)
+      setRateInput('')
+    } catch (error) {
+      console.error('Failed to load product batches:', error)
+
+      setErrorDialogMessage(
+        error instanceof Error ? error.message : 'Failed to load product batches.'
+      )
+
+      setShowErrorDialog(true)
+    } finally {
+      setIsLoadingBatches(false)
+    }
   }
 
   /*
@@ -919,48 +995,77 @@ function Billing({
     setShowItemSelector(true)
   }
 
-  function handleProductSelected(product: ProductRecord): void {
+  function handleBatchSelected(batch: BatchRecord): void {
     if (isReadOnly) {
       return
     }
 
-    const bottomIndex = lines.length - 1
+    const product = batchSelectorProduct
 
-    const newProductLine: BillingLine = {
-      id: Date.now() + Math.random(),
-      productId: product.id,
-      productName: product.name,
-      isTemporary: false,
-      barcode: product.barcode ?? null,
-      quantityPrecision: product.quantity_precision,
-      mrpPaise: product.mrp_paise,
-      quantity: 1,
-      freeQuantity: 0,
-      ratePaise: product.selling_price_paise,
-      amountPaise: product.selling_price_paise
+    if (!product) {
+      return
     }
 
-    updateCurrentSession((currentSession) => ({
-      ...currentSession,
-      lines: [
-        ...currentSession.lines.slice(0, currentSession.lines.length - 1),
-        newProductLine,
-        createEmptyLine()
-      ]
-    }))
-
-    setShowItemSelector(false)
-
-    setBarcodeInput('')
-    setBarcodeNotFound(false)
-    setRateInput('')
-
     /*
-     * Same behavior as barcode:
-     * QTY defaults to 1 and cursor goes to next blank row.
+     * User explicitly selected this batch.
+     * There is NO FIFO/automatic selection here.
      */
-    setSelectedIndex(bottomIndex + 1)
-    setActiveField('product')
+    addProductLine(product, batch)
+
+    setShowBatchSelector(false)
+    setBatchSelectorProduct(null)
+    setAvailableBatches([])
+  }
+
+  async function handleProductSelected(product: ProductRecord): Promise<void> {
+    if (isReadOnly) {
+      return
+    }
+
+    try {
+      setIsLoadingBatches(true)
+
+      const batches = await window.kirana.billing.getAvailableBatches(product.id)
+
+      /*
+       * No batches:
+       *
+       * Normal Item Master behavior.
+       */
+      if (!batches || batches.length === 0) {
+        addProductLine(product, null)
+
+        setShowItemSelector(false)
+
+        return
+      }
+
+      /*
+       * Batches exist.
+       *
+       * Close Item Master and open manual batch selection.
+       */
+      setShowItemSelector(false)
+
+      if (batches.length === 1) {
+        addProductLine(product, batches[0])
+        return
+      }
+
+      setBatchSelectorProduct(product)
+      setAvailableBatches(batches)
+      setShowBatchSelector(true)
+    } catch (error) {
+      console.error('Failed to load product batches:', error)
+
+      setErrorDialogMessage(
+        error instanceof Error ? error.message : 'Failed to load product batches.'
+      )
+
+      setShowErrorDialog(true)
+    } finally {
+      setIsLoadingBatches(false)
+    }
   }
 
   /*
@@ -1306,6 +1411,26 @@ function Billing({
           <span>Esc Back</span>
         </div>
       </div>
+    )
+  }
+
+  if (showBatchSelector && batchSelectorProduct) {
+    return (
+      <BatchSelector
+        productName={batchSelectorProduct.name}
+        batches={availableBatches}
+        onSelect={handleBatchSelected}
+        onBack={() => {
+          setShowBatchSelector(false)
+          setBatchSelectorProduct(null)
+          setAvailableBatches([])
+
+          setSelectedIndex(lines.length - 1)
+          setActiveField('product')
+          setBarcodeInput('')
+          setRateInput('')
+        }}
+      />
     )
   }
 

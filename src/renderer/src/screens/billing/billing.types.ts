@@ -7,6 +7,11 @@ export type BillingLine = {
   isTemporary: boolean
   barcode: string | null
 
+  batchId: number | null
+  batchNumber: string | null
+  expiryDate: string | null
+  batchQuantity: number
+
   quantityPrecision: number
   mrpPaise: number
 

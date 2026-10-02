@@ -214,6 +214,8 @@ declare global {
           billNumber: string
         }>
 
+        getAvailableBatches: (productId: number) => Promise<StockBatch[]>
+
         processSaleReturn: (input: unknown) => Promise<{
           returnId: number
           saleId: number

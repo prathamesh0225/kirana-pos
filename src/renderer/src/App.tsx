@@ -6,7 +6,7 @@ import ProductForm from './screens/products/ProductForm'
 import BillHistory from './screens/billing/BillHistory'
 import { Dashboard } from './screens/dashboard/Dashboard'
 import { AppShell } from './components/app-shell/AppShell'
-import type { BillingSession } from './screens/billing/billing.types'
+import type { BillingSession, BillingLine } from './screens/billing/billing.types'
 import ConfirmDialog from './components/confirm-dialog/ConfirmDialog'
 import { Settings } from './screens/settings/Settings'
 import { QuitBackupScreen } from './components/quit-backup/QuitBackupScreen'
@@ -56,13 +56,19 @@ type Screen =
       type: 'purchase-history'
     }
 
-function createEmptyBillingLine() {
+function createEmptyBillingLine(): BillingLine {
   return {
     id: Date.now() + Math.random(),
     productId: null,
     productName: '',
     isTemporary: false,
     barcode: null,
+
+    batchId: null,
+    batchNumber: null,
+    expiryDate: null,
+    batchQuantity: 0,
+
     quantityPrecision: 0,
     mrpPaise: 0,
     quantity: 0,
@@ -71,7 +77,6 @@ function createEmptyBillingLine() {
     amountPaise: 0
   }
 }
-
 function createNewBillingSession(billNumber: string): BillingSession {
   return {
     id: crypto.randomUUID(),

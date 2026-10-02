@@ -1,0 +1,297 @@
+.batch-selector-screen {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+/* ---------------------------------------------------------
+ * Title
+ * --------------------------------------------------------- */
+
+.batch-selector-title {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+ * Product Name
+ * --------------------------------------------------------- */
+
+.batch-selector-product {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #d1d5db;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+ * Table Area
+ * --------------------------------------------------------- */
+
+.batch-selector-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 20px;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+ * Table
+ * --------------------------------------------------------- */
+
+.batch-selector-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+
+/* ---------------------------------------------------------
+ * Table Header
+ * --------------------------------------------------------- */
+
+.batch-selector-table th {
+  height: 42px;
+  padding: 0 14px;
+  background: #e5e7eb;
+  border-bottom: 1px solid #c7cbd1;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/*
+ * Column widths
+ *
+ * BATCH        25%
+ * EXPIRY       18%
+ * MRP          17%
+ * SELLING RATE 25%
+ * STOCK        15%
+ */
+
+.batch-selector-table th:nth-child(1) {
+  width: 20%;
+}
+
+.batch-selector-table th:nth-child(2) {
+  width: 20%;
+  text-align: center;
+}
+
+.batch-selector-table th:nth-child(3) {
+  width: 25%;
+  text-align: center;
+}
+
+.batch-selector-table th:nth-child(4) {
+  width: 35%;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
+ * Table Cells
+ * --------------------------------------------------------- */
+
+.batch-selector-table td {
+  height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.batch-selector-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.08s ease;
+}
+
+.batch-selector-table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.batch-selector-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---------------------------------------------------------
+ * Batch Number
+ * --------------------------------------------------------- */
+
+.batch-number-cell {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------
+ * Money / Stock Columns
+ * --------------------------------------------------------- */
+
+.batch-money-cell,
+.batch-stock-cell {
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------
+ * Selected Row
+ * --------------------------------------------------------- */
+
+.batch-row-selected {
+  background: #dbeafe !important;
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.batch-row-selected td {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------
+ * Unavailable / Zero Stock Row
+ * --------------------------------------------------------- */
+
+.batch-row-unavailable {
+  color: #9ca3af;
+  background: #f9fafb;
+  cursor: not-allowed !important;
+}
+
+.batch-row-unavailable td {
+  color: #9ca3af;
+}
+
+.batch-row-unavailable:hover {
+  background: #f9fafb !important;
+}
+
+/* ---------------------------------------------------------
+ * No Batch / Error Message
+ * --------------------------------------------------------- */
+
+.batch-selector-error {
+  margin: 0 20px 12px;
+  padding: 10px 14px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+ * Footer
+ * --------------------------------------------------------- */
+
+.batch-selector-footer {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-top: 1px solid #d1d5db;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------
+ * Responsive
+ * --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .batch-selector-table th,
+  .batch-selector-table td {
+    padding: 0 10px;
+  }
+
+  .batch-selector-table th {
+    font-size: 13px;
+  }
+
+  .batch-selector-table td {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .batch-selector-table-wrapper {
+    padding: 10px;
+  }
+
+  .batch-selector-product {
+    padding: 0 12px;
+    font-size: 16px;
+  }
+
+  .batch-selector-title {
+    padding: 0 12px;
+  }
+
+  .batch-selector-footer {
+    padding: 0 12px;
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .batch-selector-table th,
+  .batch-selector-table td {
+    padding: 0 8px;
+  }
+
+  .batch-selector-table th {
+    font-size: 12px;
+  }
+
+  .batch-selector-table td {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 550px) {
+  .batch-selector-table {
+    min-width: 650px;
+  }
+
+  .batch-selector-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .batch-selector-footer {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}

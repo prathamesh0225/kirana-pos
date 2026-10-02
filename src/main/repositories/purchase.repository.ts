@@ -83,6 +83,17 @@ export type PurchaseDetail = {
   }>
 }
 
+export type StockBatchRecord = {
+  id: number
+  productId: number
+  batchNumber: string | null
+  expiryDate: string | null
+  mrpPaise: number
+  purchaseRatePaise: number
+  sellingRatePaise: number
+  quantity: number
+}
+
 type ProductRow = {
   id: number
   name: string
@@ -1297,4 +1308,103 @@ export function updatePurchase(purchaseId: number, input: CreatePurchaseInput): 
   })
 
   return transaction()
+}
+
+export function getAvailableBatchesForProduct(productId: number): StockBatchRecord[] {
+  const db = getDatabase()
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        product_id,
+        batch_number,
+        expiry_date,
+        mrp_paise,
+        purchase_rate_paise,
+        selling_rate_paise,
+        quantity
+      FROM stock_batches
+      WHERE product_id = ?
+        AND quantity > 0
+      ORDER BY
+        CASE
+          WHEN expiry_date IS NULL OR expiry_date = '' THEN 1
+          ELSE 0
+        END,
+        expiry_date ASC,
+        id ASC
+      `
+    )
+    .all(productId) as Array<{
+    id: number
+    product_id: number
+    batch_number: string | null
+    expiry_date: string | null
+    mrp_paise: number
+    purchase_rate_paise: number
+    selling_rate_paise: number
+    quantity: number
+  }>
+
+  return rows.map((row) => ({
+    id: row.id,
+    productId: row.product_id,
+    batchNumber: row.batch_number,
+    expiryDate: row.expiry_date,
+    mrpPaise: row.mrp_paise,
+    purchaseRatePaise: row.purchase_rate_paise,
+    sellingRatePaise: row.selling_rate_paise,
+    quantity: row.quantity
+  }))
+}
+
+export function getStockBatchById(batchId: number): StockBatchRecord | undefined {
+  const db = getDatabase()
+
+  const row = db
+    .prepare(
+      `
+      SELECT
+        id,
+        product_id,
+        batch_number,
+        expiry_date,
+        mrp_paise,
+        purchase_rate_paise,
+        selling_rate_paise,
+        quantity
+      FROM stock_batches
+      WHERE id = ?
+      LIMIT 1
+      `
+    )
+    .get(batchId) as
+    | {
+        id: number
+        product_id: number
+        batch_number: string | null
+        expiry_date: string | null
+        mrp_paise: number
+        purchase_rate_paise: number
+        selling_rate_paise: number
+        quantity: number
+      }
+    | undefined
+
+  if (!row) {
+    return undefined
+  }
+
+  return {
+    id: row.id,
+    productId: row.product_id,
+    batchNumber: row.batch_number,
+    expiryDate: row.expiry_date,
+    mrpPaise: row.mrp_paise,
+    purchaseRatePaise: row.purchase_rate_paise,
+    sellingRatePaise: row.selling_rate_paise,
+    quantity: row.quantity
+  }
 }

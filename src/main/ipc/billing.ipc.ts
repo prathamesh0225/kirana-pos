@@ -9,6 +9,7 @@ import {
 import { processSaleReturn, type ProcessSaleReturnInput } from '../services/return.service'
 import { listSales, getSaleById } from '../repositories/sale.repository'
 import { updateSale, type UpdateSaleInput } from '../services/sale-update.service'
+import { getAvailableBatchesForProduct } from '../repositories/purchase.repository'
 
 export function registerBillingIpc(): void {
   ipcMain.handle('billing:getSlots', () => {
@@ -72,3 +73,11 @@ export function registerBillingIpc(): void {
     return allocateNextBillNumberForSlot(db, 1)
   })
 }
+
+ipcMain.handle('billing:getAvailableBatches', (_event, productId: number) => {
+  if (!Number.isInteger(productId) || productId <= 0) {
+    throw new Error('Invalid product ID')
+  }
+
+  return getAvailableBatchesForProduct(productId)
+})

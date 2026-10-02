@@ -87,6 +87,9 @@ const api = {
     allocateNextBillNumber: (slotId: 0 | 1) =>
       ipcRenderer.invoke('billing:allocateNextBillNumber', slotId),
 
+    getAvailableBatches: (productId: number) =>
+      ipcRenderer.invoke('billing:getAvailableBatches', productId),
+
     completeSale: (input: unknown) => ipcRenderer.invoke('billing:completeSale', input),
 
     processSaleReturn: (input: unknown) => ipcRenderer.invoke('billing:processSaleReturn', input),

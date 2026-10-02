@@ -30,6 +30,9 @@ export type SaleDetailItem = {
   productId: number | null
   productName: string
   barcode: string | null
+  batchId: number | null
+  batchNumber: string | null
+  expiryDate: string | null
   mrpPaise: number
   quantity: number
   freeQuantity: number
