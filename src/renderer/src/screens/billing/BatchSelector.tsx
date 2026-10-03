@@ -24,7 +24,7 @@ function formatRupees(paise: number | null | undefined): string {
     return '-'
   }
 
-  return (paise / 100).toFixed(2)
+  return ((paise ?? 0) / 100).toFixed(2)
 }
 
 export default function BatchSelector({

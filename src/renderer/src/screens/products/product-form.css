@@ -1,7 +1,10 @@
 /* =========================================================
    PRODUCT FORM
    ========================================================= */
-
+::selection {
+    color: none;
+    background: none;
+}
 .product-form {
   width: 100%;
   height: 100%;
@@ -148,12 +151,12 @@
 
 .product-fields input:focus {
   border: 2px solid #173f66;
-
+  color:#c5d2da;
   background: #173f66;
 }
 
 .number-input {
-  text-align: right;
+  text-align: left;
 }
 
 /* =========================================================

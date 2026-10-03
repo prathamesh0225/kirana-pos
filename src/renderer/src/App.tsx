@@ -317,12 +317,6 @@ function App(): React.JSX.Element {
     })
   }
 
-  function handleOpenPurchaseHistory(): void {
-    setScreen({
-      type: 'purchase-history'
-    })
-  }
-
   /*
    * Return from historical bill to Bill History.
    */

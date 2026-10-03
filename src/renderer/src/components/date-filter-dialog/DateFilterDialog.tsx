@@ -50,6 +50,7 @@ function getMonthStart(): string {
 
 function getYesterday(): string {
   const date = new Date()
+
   date.setDate(date.getDate() - 1)
 
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
@@ -87,15 +88,6 @@ function isValidDate(year: number, month: number, day: number): boolean {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
 }
 
-/**
- * Converts user input into YYYY-MM-DD.
- *
- * Supported:
- * 26        -> current month/year, day 26
- * 2609      -> 26/current year, September
- * 250926    -> 25/09/2026
- * 25092026  -> 25/09/2026
- */
 function parseDateInput(value: string): string | null {
   const input = value.trim().replace(/\D/g, '')
 
@@ -104,6 +96,7 @@ function parseDateInput(value: string): string | null {
   }
 
   const now = new Date()
+
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
 
@@ -157,7 +150,18 @@ function DateFilterDialog({
 
   const [error, setError] = useState<string | null>(null)
 
+  /*
+   * TRUE when the current values are ready to apply.
+   *
+   * This is set after:
+   *
+   * 1. A preset is selected
+   * 2. The user presses Enter on To Date once
+   */
+  const [readyToApply, setReadyToApply] = useState(false)
+
   const fromRef = useRef<HTMLInputElement>(null)
+
   const toRef = useRef<HTMLInputElement>(null)
 
   useEffect((): void => {
@@ -166,9 +170,16 @@ function DateFilterDialog({
     }
 
     setFromInput(formatDisplayDate(initialFromDate ?? getToday()))
+
     setToInput(formatDisplayDate(initialToDate ?? getToday()))
+
     setActiveField('from')
     setError(null)
+
+    /*
+     * Initial dates are displayed but not yet submitted.
+     */
+    setReadyToApply(false)
 
     requestAnimationFrame((): void => {
       fromRef.current?.focus()
@@ -180,38 +191,76 @@ function DateFilterDialog({
     return null
   }
 
+  /*
+   * Validate and apply the current dates.
+   */
   const applyFilter = (): void => {
     const fromDate = parseDateInput(fromInput)
     const toDate = parseDateInput(toInput)
 
     if (fromInput.trim() && !fromDate) {
       setError('Invalid From Date.')
+
       fromRef.current?.focus()
+
       return
     }
 
     if (toInput.trim() && !toDate) {
       setError('Invalid To Date.')
+
       toRef.current?.focus()
+
       return
     }
 
     if (fromDate && toDate && fromDate > toDate) {
       setError('From Date cannot be after To Date.')
+
       fromRef.current?.focus()
+
       return
     }
 
+    /*
+     * Stop the current Enter event from reaching
+     * Bill History / App keyboard handlers.
+     */
     onApply({
       fromDate,
       toDate
     })
   }
 
+  /*
+   * Select a quick range.
+   *
+   * IMPORTANT:
+   * This does NOT immediately apply.
+   *
+   * The next Enter applies it.
+   */
   const applyPreset = (range: DateRange): void => {
     setFromInput(formatDisplayDate(range.fromDate))
+
     setToInput(formatDisplayDate(range.toDate))
+
     setError(null)
+
+    /*
+     * A preset is now ready to apply.
+     */
+    setReadyToApply(true)
+
+    /*
+     * Keep focus inside the dialog.
+     */
+    requestAnimationFrame((): void => {
+      fromRef.current?.focus()
+      fromRef.current?.select()
+
+      setActiveField('from')
+    })
   }
 
   const handleDateKeyDown = (
@@ -220,26 +269,61 @@ function DateFilterDialog({
   ): void => {
     if (event.key === 'Enter') {
       event.preventDefault()
+      event.stopPropagation()
 
+      /*
+       * If the user already pressed Enter on To Date
+       * once, the next Enter applies the filter.
+       */
+      if (field === 'to' && readyToApply) {
+        applyFilter()
+        return
+      }
+
+      /*
+       * Validate the current field.
+       */
       const parsed = parseDateInput(event.currentTarget.value)
 
       if (event.currentTarget.value.trim() && !parsed) {
         setError(field === 'from' ? 'Invalid From Date.' : 'Invalid To Date.')
+
         return
       }
 
       const formatted = parsed ? formatDisplayDate(parsed) : ''
 
+      /*
+       * FROM DATE
+       *
+       * Enter moves to To Date.
+       */
       if (field === 'from') {
         setFromInput(formatted)
 
+        setReadyToApply(false)
+
         toRef.current?.focus()
         toRef.current?.select()
+
         setActiveField('to')
-      } else {
-        setToInput(formatted)
-        applyFilter()
+
+        return
       }
+
+      /*
+       * TO DATE
+       *
+       * First Enter only validates and prepares
+       * the filter.
+       *
+       * It does NOT apply yet.
+       */
+      setToInput(formatted)
+
+      setReadyToApply(true)
+
+      setActiveField('to')
 
       return
     }
@@ -249,6 +333,7 @@ function DateFilterDialog({
       event.stopPropagation()
 
       onCancel()
+
       return
     }
 
@@ -258,6 +343,7 @@ function DateFilterDialog({
       if (field === 'to') {
         fromRef.current?.focus()
         fromRef.current?.select()
+
         setActiveField('from')
       }
 
@@ -270,13 +356,42 @@ function DateFilterDialog({
       if (field === 'from') {
         toRef.current?.focus()
         toRef.current?.select()
+
         setActiveField('to')
       }
     }
   }
 
+  /*
+   * Handle Enter at the dialog level.
+   *
+   * This is particularly important after clicking
+   * a preset button.
+   */
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Enter') {
+      return
+    }
+
+    /*
+     * Input fields handle their own Enter.
+     */
+    if (event.target === fromRef.current || event.target === toRef.current) {
+      return
+    }
+
+    if (!readyToApply) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    applyFilter()
+  }
+
   return (
-    <div className="date-filter-overlay">
+    <div className="date-filter-overlay" onKeyDown={handleDialogKeyDown}>
       <div className="date-filter-dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="date-filter-title">{title}</div>
 
@@ -291,10 +406,19 @@ function DateFilterDialog({
               inputMode="numeric"
               value={fromInput}
               placeholder="DD/MM/YYYY"
-              onFocus={(): void => setActiveField('from')}
+              onFocus={(): void => {
+                setActiveField('from')
+              }}
               onChange={(event): void => {
                 setFromInput(event.target.value)
+
                 setError(null)
+
+                /*
+                 * User changed the date,
+                 * so the previous ready state is invalid.
+                 */
+                setReadyToApply(false)
               }}
               onKeyDown={(event): void => handleDateKeyDown(event, 'from')}
             />
@@ -310,10 +434,15 @@ function DateFilterDialog({
               inputMode="numeric"
               value={toInput}
               placeholder="DD/MM/YYYY"
-              onFocus={(): void => setActiveField('to')}
+              onFocus={(): void => {
+                setActiveField('to')
+              }}
               onChange={(event): void => {
                 setToInput(event.target.value)
+
                 setError(null)
+
+                setReadyToApply(false)
               }}
               onKeyDown={(event): void => handleDateKeyDown(event, 'to')}
             />
@@ -328,64 +457,87 @@ function DateFilterDialog({
               <div className="date-filter-preset-buttons">
                 <button
                   type="button"
-                  onClick={(): void =>
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
                     applyPreset({
                       fromDate: getToday(),
                       toDate: getToday()
                     })
-                  }
+                  }}
                 >
                   Today
                 </button>
 
                 <button
                   type="button"
-                  onClick={(): void =>
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
                     applyPreset({
                       fromDate: getYesterday(),
                       toDate: getYesterday()
                     })
-                  }
+                  }}
                 >
                   Yesterday
                 </button>
 
                 <button
                   type="button"
-                  onClick={(): void =>
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
                     applyPreset({
                       fromDate: getThisWeekStart(),
                       toDate: getToday()
                     })
-                  }
+                  }}
                 >
                   This Week
                 </button>
 
                 <button
                   type="button"
-                  onClick={(): void =>
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
                     applyPreset({
                       fromDate: getMonthStart(),
                       toDate: getToday()
                     })
-                  }
+                  }}
                 >
                   This Month
                 </button>
 
-                <button type="button" onClick={(): void => applyPreset(getLastMonthRange())}>
+                <button
+                  type="button"
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
+                    applyPreset(getLastMonthRange())
+                  }}
+                >
                   Last Month
                 </button>
 
                 <button
                   type="button"
-                  onClick={(): void =>
+                  onClick={(event): void => {
+                    event.preventDefault()
+                    event.stopPropagation()
+
                     applyPreset({
                       fromDate: null,
                       toDate: null
                     })
-                  }
+                  }}
                 >
                   All
                 </button>
@@ -398,7 +550,9 @@ function DateFilterDialog({
           <span>{activeField === 'from' ? 'From Date' : 'To Date'}</span>
 
           <span>Enter Apply</span>
+
           <span>←→ Fields</span>
+
           <span>Esc Cancel</span>
         </div>
       </div>

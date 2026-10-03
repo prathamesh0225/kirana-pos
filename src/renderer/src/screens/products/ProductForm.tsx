@@ -79,8 +79,8 @@ function ProductForm({
     nameRef,
     unitRef,
     mrpRef,
-    sellingPriceRef,
     purchasePriceRef,
+    sellingPriceRef,
     lowStockRef,
     ...(isEdit ? [] : [stockRef])
   ]
@@ -533,19 +533,6 @@ function ProductForm({
           </label>
 
           <label>
-            <span>Selling Rate</span>
-
-            <input
-              ref={sellingPriceRef}
-              className="number-input"
-              inputMode="decimal"
-              value={form.sellingPrice}
-              onChange={(event) => updateField('sellingPrice', event.target.value)}
-              onKeyDown={(event) => handleFieldKeyDown(event, 4)}
-            />
-          </label>
-
-          <label>
             <span>Purchase Rate</span>
 
             <input
@@ -554,6 +541,19 @@ function ProductForm({
               inputMode="decimal"
               value={form.purchasePrice}
               onChange={(event) => updateField('purchasePrice', event.target.value)}
+              onKeyDown={(event) => handleFieldKeyDown(event, 4)}
+            />
+          </label>
+
+          <label>
+            <span>Selling Rate</span>
+
+            <input
+              ref={sellingPriceRef}
+              className="number-input"
+              inputMode="decimal"
+              value={form.sellingPrice}
+              onChange={(event) => updateField('sellingPrice', event.target.value)}
               onKeyDown={(event) => handleFieldKeyDown(event, 5)}
             />
           </label>

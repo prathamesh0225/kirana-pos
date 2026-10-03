@@ -4,6 +4,7 @@ import './purchase-entry.css'
 import ItemMaster from '../products/ItemMaster'
 import SupplierMaster from '../suppliers/SupplierMaster'
 import ConfirmationDialog from '../../components/confirm-dialog/ConfirmDialog'
+import ProductForm from '../products/ProductForm'
 
 type PurchaseEntryProps = {
   supplier: Supplier | null
@@ -191,7 +192,7 @@ export default function PurchaseEntry({
   const [invoiceDateInput, setInvoiceDateInput] = useState(() => formatDisplayDate(todayIso()))
 
   const [lines, setLines] = useState<PurchaseLine[]>([createEmptyLine()])
-  const [loadingPurchase, setLoadingPurchase] = useState(false)
+  //   const [loadingPurchase, setLoadingPurchase] = useState(false)
 
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -200,6 +201,9 @@ export default function PurchaseEntry({
   const [showItemSelector, setShowItemSelector] = useState(false)
   const [showSupplierSelector, setShowSupplierSelector] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+
+  const [itemFormMode, setItemFormMode] = useState<'add' | 'edit' | null>(null)
+  const [itemFormProductId, setItemFormProductId] = useState<number | null>(null)
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH')
 
@@ -407,6 +411,9 @@ export default function PurchaseEntry({
 
     async function loadPurchase(): Promise<void> {
       try {
+        if (purchaseId === undefined) {
+          return
+        }
         const purchase = await window.kirana.purchase.get(purchaseId)
 
         if (!purchase) {
@@ -598,7 +605,6 @@ export default function PurchaseEntry({
 
     const newProductLine: PurchaseLine = {
       id: Date.now() + Math.random(),
-
       productId: product.id,
       productName: product.name,
       barcode: product.barcode ?? null,
@@ -614,12 +620,10 @@ export default function PurchaseEntry({
       purchaseRatePaise: product.purchase_price_paise,
       sellingRatePaise: product.selling_price_paise,
 
-      quantity: 1,
+      quantity: 0,
       freeQuantity: 0,
-
       batchNumber: '',
       expiryDate: '',
-
       amountPaise: 0
     }
 
@@ -633,11 +637,23 @@ export default function PurchaseEntry({
 
     setBarcodeInput('')
     setProductNotFound(false)
-    setEditInput('')
-
-    setSelectedIndex(bottomIndex + 1)
-    setActiveField('product')
+    setSaveMessage('')
     setFinalizeStep(null)
+
+    /*
+     * IMPORTANT:
+     * Stay on the newly added product row.
+     *
+     * Do NOT move to the blank row.
+     */
+    setSelectedIndex(bottomIndex)
+
+    /*
+     * Start the field sequence at MRP.
+     */
+    setEditInput(product.mrp_paise === 0 ? '' : (product.mrp_paise / 100).toString())
+
+    setActiveField('mrp')
   }
 
   function handleProductSelected(product: ProductRecord): void {
@@ -849,9 +865,88 @@ export default function PurchaseEntry({
    * ---------------------------------------------------------
    */
 
+  function canLeaveCurrentPurchaseField(): boolean {
+    if (!selectedLine) {
+      return false
+    }
+
+    switch (activeField) {
+      case 'mrp':
+        if (!editInput.trim()) {
+          setSaveMessage('MRP is required.')
+          return false
+        }
+
+        return true
+
+      case 'purchase':
+        if (!editInput.trim()) {
+          setSaveMessage('Purchase rate is required.')
+          return false
+        }
+
+        return true
+
+      case 'selling':
+        if (!editInput.trim()) {
+          setSaveMessage('Selling rate is required.')
+          return false
+        }
+
+        return true
+
+      case 'quantity': {
+        const value = editInput.trim()
+
+        if (!value) {
+          setSaveMessage('Quantity is required.')
+          return false
+        }
+
+        const quantity = Number(value)
+
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          setSaveMessage('Quantity must be greater than 0.')
+          return false
+        }
+
+        return true
+      }
+
+      case 'free':
+        // Blank Free means 0.
+        return true
+
+      case 'batch':
+        // Optional.
+        return true
+
+      case 'expiry':
+        // Optional.
+        return true
+
+      default:
+        return true
+    }
+  }
+
   function moveToNextPurchaseField(): void {
     if (!selectedLine) {
       return
+    }
+
+    if (
+      activeField === 'mrp' ||
+      activeField === 'purchase' ||
+      activeField === 'selling' ||
+      activeField === 'quantity' ||
+      activeField === 'free' ||
+      activeField === 'batch' ||
+      activeField === 'expiry'
+    ) {
+      if (!canLeaveCurrentPurchaseField()) {
+        return
+      }
     }
 
     switch (activeField) {
@@ -924,7 +1019,7 @@ export default function PurchaseEntry({
           return
         }
 
-        setEditInput(selectedLine.freeQuantity === 0 ? '' : String(selectedLine.freeQuantity))
+        setEditInput('')
 
         setActiveField('free')
         return
@@ -1065,7 +1160,7 @@ export default function PurchaseEntry({
         return
       }
 
-      if (event.key === 'F5') {
+      if (event.key === 'F9') {
         event.preventDefault()
         event.stopPropagation()
 
@@ -1137,24 +1232,27 @@ export default function PurchaseEntry({
         return
       }
 
-      if (event.key === 'ArrowDown') {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
+        event.stopPropagation()
 
-        setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
+        /*
+         * Once a product has been added, do not allow
+         * Arrow navigation to bypass its fields.
+         */
+        if (selectedLine?.productId !== null && activeField !== 'product') {
+          return
+        }
 
-        setActiveField('product')
-        setBarcodeInput('')
-        setProductNotFound(false)
-        setEditInput('')
-        setFinalizeStep(null)
-
-        return
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault()
-
-        setSelectedIndex((current) => Math.max(current - 1, 0))
+        /*
+         * Product field / blank row can still use
+         * Arrow navigation.
+         */
+        if (event.key === 'ArrowDown') {
+          setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
+        } else {
+          setSelectedIndex((current) => Math.max(current - 1, 0))
+        }
 
         setActiveField('product')
         setBarcodeInput('')
@@ -1174,6 +1272,14 @@ export default function PurchaseEntry({
       }
 
       if (event.key !== 'Enter') {
+        return
+      }
+
+      if (event.target === productInputRef.current) {
+        return
+      }
+
+      if (event.target === invoiceRef.current) {
         return
       }
 
@@ -1243,21 +1349,54 @@ export default function PurchaseEntry({
    */
 
   if (showItemSelector) {
+    if (itemFormMode === 'add') {
+      return (
+        <ProductForm
+          onSaved={() => {
+            setItemFormMode(null)
+          }}
+          onCancel={() => {
+            setItemFormMode(null)
+          }}
+        />
+      )
+    }
+
+    if (itemFormMode === 'edit' && itemFormProductId !== null) {
+      return (
+        <ProductForm
+          productId={itemFormProductId}
+          onSaved={() => {
+            setItemFormMode(null)
+            setItemFormProductId(null)
+          }}
+          onCancel={() => {
+            setItemFormMode(null)
+            setItemFormProductId(null)
+          }}
+        />
+      )
+    }
+
     return (
       <ItemMaster
-        mode="select"
+        mode="manage"
         onBack={() => {
           setShowItemSelector(false)
 
           setSelectedIndex(lines.length - 1)
-
           setActiveField('product')
           setBarcodeInput('')
           setProductNotFound(false)
         }}
         onSelectItem={handleProductSelected}
-        onAddItem={() => {}}
-        onEditItem={() => {}}
+        onAddItem={() => {
+          setItemFormMode('add')
+        }}
+        onEditItem={(productId) => {
+          setItemFormProductId(productId)
+          setItemFormMode('edit')
+        }}
       />
     )
   }
@@ -1692,16 +1831,49 @@ export default function PurchaseEntry({
           </div>
 
           <div className="purchase-field">
-            <label>Invoice :</label>
+            <label>
+              Invoice<span className="purchase-required">*</span> :
+            </label>
 
             <input
               ref={invoiceRef}
               value={invoiceNumber}
+              required
               onChange={(event) => {
                 setInvoiceNumber(event.target.value)
                 setSaveMessage('')
               }}
               onFocus={() => setActiveField('invoice')}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') {
+                  return
+                }
+
+                event.preventDefault()
+                event.stopPropagation()
+
+                if (!invoiceNumber.trim()) {
+                  setSaveMessage('Invoice number is required.')
+
+                  requestAnimationFrame(() => {
+                    invoiceRef.current?.focus()
+                  })
+
+                  return
+                }
+
+                /*
+                 * Invoice is valid.
+                 * Continue with the normal Purchase Entry flow.
+                 */
+                setSaveMessage('')
+
+                // If you want Enter to move to the first product row:
+                setSelectedIndex(0)
+                setActiveField('product')
+                setBarcodeInput('')
+                setEditInput('')
+              }}
             />
           </div>
         </div>
@@ -1768,16 +1940,36 @@ export default function PurchaseEntry({
                     ref={selected ? selectedRowRef : undefined}
                     className={selected ? 'purchase-row-selected' : ''}
                     onClick={() => {
-                      setSelectedIndex(index)
-                      setActiveField('product')
-                      setEditInput('')
-                      setSaveMessage('')
-                      setFinalizeStep(null)
+                      /*
+                       * STRICT RULE:
+                       * Once editing a product line has started,
+                       * clicking another row cannot bypass the
+                       * remaining purchase fields.
+                       */
+                      if (
+                        selectedLine?.productId !== null &&
+                        activeField !== 'product' &&
+                        index !== selectedIndex
+                      ) {
+                        return
+                      }
 
-                      if (line.productId === null && line.productName === '') {
+                      setSelectedIndex(index)
+
+                      /*
+                       * Blank row starts at Product.
+                       * Existing product rows should not be reset
+                       * back to Product when clicked.
+                       */
+                      if (line.productId === null) {
+                        setActiveField('product')
+                        setEditInput('')
                         setBarcodeInput('')
                         setProductNotFound(false)
                       }
+
+                      setSaveMessage('')
+                      setFinalizeStep(null)
                     }}
                   >
                     {/* PRODUCT */}
@@ -1995,7 +2187,7 @@ export default function PurchaseEntry({
           <span>F2 Add Item</span>
           <span>Enter Next</span>
           <span>F4 Supplier</span>
-          <span>F5 History</span>
+          <span>F9 History</span>
           <span>Delete Remove</span>
           <span>F6 Save</span>
           <span>Esc Back</span>

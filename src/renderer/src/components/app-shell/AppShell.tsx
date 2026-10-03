@@ -15,7 +15,7 @@ const menuGroups = [
       { id: 'dashboard', label: 'Dashboard', icon: '▣' },
       { id: 'billing', label: 'Billing F1', icon: '▤' },
       { id: 'history', label: 'Bill History F2', icon: '▥' },
-      { id: 'items', label: 'Items F3', icon: '□' },
+      { id: 'items', label: 'Items F3', icon: '□' }
       // { id: 'returns', label: 'Returns', icon: '↩' }
     ]
   },
@@ -36,10 +36,7 @@ const menuGroups = [
   },
   {
     title: 'SYSTEM',
-    items: [
-      { id: 'settings', label: 'Settings', icon: '⚙' },
-      { id: 'backup', label: 'Backup & Restore', icon: '⇅' }
-    ]
+    items: [{ id: 'settings', label: 'Settings', icon: '⚙' }]
   }
 ]
 

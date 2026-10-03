@@ -53,8 +53,28 @@ export type SaleReturnSummary = {
   status: string
 }
 
-export function listSales(db: Database.Database, limit = 100): SaleListItem[] {
+export function listSales(
+  db: Database.Database,
+  limit = 100,
+  fromDate?: string,
+  toDate?: string
+): SaleListItem[] {
   const safeLimit = Math.max(1, Math.min(Math.floor(limit), 500))
+
+  const conditions: string[] = []
+  const params: Array<string | number> = []
+
+  if (fromDate) {
+    conditions.push(`date(s.sale_date) >= date(?)`)
+    params.push(fromDate)
+  }
+
+  if (toDate) {
+    conditions.push(`date(s.sale_date) <= date(?)`)
+    params.push(toDate)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   const rows = db
     .prepare(
@@ -77,11 +97,12 @@ export function listSales(db: Database.Database, limit = 100): SaleListItem[] {
         ) AS refunded_paise
 
       FROM sales s
+      ${whereClause}
       ORDER BY s.id DESC
       LIMIT ?
       `
     )
-    .all(safeLimit) as Array<{
+    .all(...params, safeLimit) as Array<{
     id: number
     bill_number: string
     sale_date: string

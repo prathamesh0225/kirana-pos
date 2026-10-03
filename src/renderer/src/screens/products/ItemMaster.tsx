@@ -1,3 +1,4 @@
+//ItemMaster.tsx
 import { useEffect, useRef, useState } from 'react'
 import './item-master.css'
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
@@ -57,6 +58,7 @@ function ItemMaster({
   })
 
   const searchRef = useRef<HTMLInputElement>(null)
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
 
   async function loadProducts(): Promise<void> {
     try {
@@ -85,6 +87,47 @@ function ItemMaster({
   useEffect(() => {
     searchRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const row = selectedRowRef.current
+
+      if (!row) {
+        return
+      }
+
+      const container = row.closest('.item-master-table-wrap')
+
+      if (!(container instanceof HTMLElement)) {
+        return
+      }
+
+      const header = container.querySelector('thead')
+
+      if (!(header instanceof HTMLElement)) {
+        return
+      }
+
+      const headerHeight = header.getBoundingClientRect().height
+
+      const rowRect = row.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+
+      const visibleTop = containerRect.top + headerHeight
+      const visibleBottom = containerRect.bottom
+
+      // Row is hidden underneath the sticky header.
+      if (rowRect.top < visibleTop) {
+        container.scrollTop -= visibleTop - rowRect.top
+        return
+      }
+
+      // Row is below the visible list area.
+      if (rowRect.bottom > visibleBottom) {
+        container.scrollTop += rowRect.bottom - visibleBottom
+      }
+    })
+  }, [selectedIndex])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -149,12 +192,12 @@ function ItemMaster({
         return
       }
 
-      if (event.key === 'Enter' && mode === 'select') {
+      if (event.key === 'Enter' && onSelectItem) {
         event.preventDefault()
 
         const selectedProduct = products[selectedIndex]
 
-        if (selectedProduct && onSelectItem) {
+        if (selectedProduct) {
           onSelectItem(selectedProduct)
         }
 
@@ -376,6 +419,7 @@ function ItemMaster({
                 return (
                   <tr
                     key={product.id}
+                    ref={selected ? selectedRowRef : null}
                     className={selected ? 'selected-row' : ''}
                     onClick={(): void => {
                       setSelectedIndex(index)
