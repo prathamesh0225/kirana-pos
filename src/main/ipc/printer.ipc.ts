@@ -2,8 +2,11 @@
 import { ipcMain } from 'electron'
 import { getInstalledPrinters, printTestPage } from '../services/printer.service'
 import { printReceipt, type EscPosReceipt } from '../services/escpos.service'
+import { printBarcodeLabels, type BarcodePrintInput } from '../services/barcode-print.service'
 
 let receiptPrintInProgress = false
+let barcodePrintInProgress = false
+
 export function registerPrinterIpc(): void {
   ipcMain.handle('printer:list', async () => {
     return getInstalledPrinters()
@@ -12,6 +15,32 @@ export function registerPrinterIpc(): void {
   ipcMain.handle('printer:test', async (_event, printerName: string) => {
     await printTestPage(printerName)
   })
+
+  /*
+   * ---------------------------------------------------------
+   * BARCODE PRINT
+   * ---------------------------------------------------------
+   */
+
+  ipcMain.handle('printer:printBarcode', async (_event, input: BarcodePrintInput) => {
+    if (barcodePrintInProgress) {
+      throw new Error('Barcode printer is busy. Please wait for the current print to finish.')
+    }
+
+    barcodePrintInProgress = true
+
+    try {
+      await printBarcodeLabels(input)
+    } finally {
+      barcodePrintInProgress = false
+    }
+  })
+
+  /*
+   * ---------------------------------------------------------
+   * RECEIPT PRINT
+   * ---------------------------------------------------------
+   */
 
   ipcMain.handle(
     'printer:printReceipt',

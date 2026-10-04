@@ -158,7 +158,18 @@ const api = {
     printReceipt: (printerName: string, receipt: unknown) =>
       ipcRenderer.invoke('printer:printReceipt', printerName, receipt),
     rawReceiptTest: (printerName: string) =>
-      ipcRenderer.invoke('printer:rawReceiptTest', printerName)
+      ipcRenderer.invoke('printer:rawReceiptTest', printerName),
+
+    printBarcode: (input: {
+      printerName: string
+      barcode: string
+      shopName: string
+      productName: string
+      mrpPaise: number
+      sellingPricePaise: number
+      quantity: number
+      extraText?: string
+    }) => ipcRenderer.invoke('printer:printBarcode', input)
   },
 
   settings: {

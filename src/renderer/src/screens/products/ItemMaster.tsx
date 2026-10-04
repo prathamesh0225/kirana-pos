@@ -7,6 +7,7 @@ import DateFilterDialog, {
 } from '../../components/date-filter-dialog/DateFilterDialog'
 import StockAdjustment from './StockAdjustment'
 import StockHistory from './StockHistory'
+import BarcodePrintDialog from '../../components/barcode-print-dialog/BarcodePrintDialog'
 
 type ItemMasterProps = {
   mode?: 'manage' | 'select'
@@ -59,6 +60,8 @@ function ItemMaster({
 
   // const [allProducts, setAllProducts] = useState<ProductRecord[]>([])
   const [searchError, setSearchError] = useState('')
+
+  const [barcodePrintProduct, setBarcodePrintProduct] = useState<ProductRecord | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
@@ -137,7 +140,12 @@ function ItemMaster({
        * Child screen/dialog currently owns the keyboard.
        * Item Master must not process any shortcuts.
        */
-      if (stockHistoryDateFilterOpen || stockAdjustmentProduct || stockHistoryProduct) {
+      if (
+        stockHistoryDateFilterOpen ||
+        stockAdjustmentProduct ||
+        stockHistoryProduct ||
+        barcodePrintProduct
+      ) {
         return
       }
 
@@ -269,6 +277,18 @@ function ItemMaster({
           requestAnimationFrame(() => {
             searchRef.current?.focus()
           })
+        }
+
+        return
+      }
+
+      if ((event.key === '+' || event.key === '=') && mode === 'manage') {
+        event.preventDefault()
+
+        const selectedProduct = products[selectedIndex]
+
+        if (selectedProduct) {
+          setBarcodePrintProduct(selectedProduct)
         }
 
         return
@@ -647,6 +667,17 @@ function ItemMaster({
         onCancel={(): void => {
           setStockHistoryDateFilterOpen(false)
           setStockHistoryProduct(null)
+        }}
+      />
+      <BarcodePrintDialog
+        open={barcodePrintProduct !== null}
+        product={barcodePrintProduct as ProductRecord}
+        onClose={(): void => {
+          setBarcodePrintProduct(null)
+
+          requestAnimationFrame(() => {
+            searchRef.current?.focus()
+          })
         }}
       />
     </div>
