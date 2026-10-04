@@ -149,6 +149,21 @@ export function createPurchase(input: CreatePurchaseInput): PurchaseResult {
     throw new Error('Supplier invoice number is required.')
   }
 
+  const existingInvoice = db
+    .prepare(
+      `
+    SELECT id
+    FROM purchase_invoices
+    WHERE invoice_number = ?
+    LIMIT 1
+    `
+    )
+    .get(invoiceNumber) as { id: number } | undefined
+
+  if (existingInvoice) {
+    throw new Error(`Purchase invoice number "${invoiceNumber}" already exists.`)
+  }
+
   validateDate(input.purchaseDate)
 
   if (!['CASH', 'UPI', 'CREDIT'].includes(input.paymentMethod)) {
@@ -849,6 +864,22 @@ export function updatePurchase(purchaseId: number, input: CreatePurchaseInput): 
     throw new Error('Supplier invoice number is required.')
   }
 
+  const duplicateInvoice = db
+    .prepare(
+      `
+    SELECT id
+    FROM purchase_invoices
+    WHERE invoice_number = ?
+      AND id != ?
+    LIMIT 1
+    `
+    )
+    .get(invoiceNumber, purchaseId) as { id: number } | undefined
+
+  if (duplicateInvoice) {
+    throw new Error(`Purchase invoice number "${invoiceNumber}" already exists.`)
+  }
+
   validateDate(input.purchaseDate)
 
   if (!['CASH', 'UPI', 'CREDIT'].includes(input.paymentMethod)) {
@@ -1264,6 +1295,8 @@ export function updatePurchase(purchaseId: number, input: CreatePurchaseInput): 
         batchId = Number(batchResult.lastInsertRowid)
       }
 
+      const lineAmountPaise = Math.round(line.purchaseRatePaise * line.quantity)
+
       insertPurchaseItem.run(
         purchaseId,
         product.id,
@@ -1273,7 +1306,7 @@ export function updatePurchase(purchaseId: number, input: CreatePurchaseInput): 
         line.sellingRatePaise,
         line.quantity,
         line.freeQuantity,
-        line.amountPaise,
+        lineAmountPaise,
         now
       )
 
@@ -1407,4 +1440,21 @@ export function getStockBatchById(batchId: number): StockBatchRecord | undefined
     sellingRatePaise: row.selling_rate_paise,
     quantity: row.quantity
   }
+}
+
+export function findPurchaseByInvoiceNumber(invoiceNumber: string): { id: number } | null {
+  const database = getDatabase()
+
+  const row = database
+    .prepare(
+      `
+      SELECT id
+      FROM purchase_invoices
+      WHERE invoice_number = ?
+      LIMIT 1
+      `
+    )
+    .get(invoiceNumber.trim()) as { id: number } | undefined
+
+  return row ?? null
 }

@@ -1,3 +1,4 @@
+//product.repository.ts
 import { getDatabase } from '../database'
 
 export type ProductRecord = {
@@ -76,6 +77,78 @@ export function findProductByBarcode(barcode: string): ProductRecord | undefined
     `
     )
     .get(barcode) as ProductRecord | undefined
+}
+
+const INTERNAL_BARCODE_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+function generateBarcodeCandidate(): string {
+  let barcode = ''
+
+  for (let i = 0; i < 7; i++) {
+    const index = Math.floor(Math.random() * INTERNAL_BARCODE_CHARACTERS.length)
+    barcode += INTERNAL_BARCODE_CHARACTERS[index]
+  }
+
+  return barcode
+}
+
+export function generateUniqueBarcode(): string {
+  const db = getDatabase()
+
+  /*
+   * Try multiple candidates rather than relying on
+   * randomness alone.
+   */
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const barcode = generateBarcodeCandidate()
+
+    const existing = db
+      .prepare(
+        `
+        SELECT id
+        FROM products
+        WHERE barcode = ?
+        LIMIT 1
+        `
+      )
+      .get(barcode)
+
+    if (!existing) {
+      return barcode
+    }
+  }
+
+  throw new Error('Unable to generate a unique barcode')
+}
+
+export function findProductByName(
+  name: string,
+  excludeProductId?: number
+): ProductRecord | undefined {
+  const db = getDatabase()
+
+  if (excludeProductId !== undefined) {
+    return db
+      .prepare(
+        `
+        ${getProductSelectSql()}
+        WHERE TRIM(name) COLLATE NOCASE = TRIM(?)
+          AND id != ?
+        LIMIT 1
+        `
+      )
+      .get(name, excludeProductId) as ProductRecord | undefined
+  }
+
+  return db
+    .prepare(
+      `
+      ${getProductSelectSql()}
+      WHERE TRIM(name) COLLATE NOCASE = TRIM(?)
+      LIMIT 1
+      `
+    )
+    .get(name) as ProductRecord | undefined
 }
 
 export function findProductById(productId: number): ProductRecord | undefined {

@@ -1,3 +1,4 @@
+//escpos.service.ts
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 
 const RECEIPT_WIDTH = 48

@@ -103,13 +103,41 @@ function ProductForm({
    */
   useEffect(() => {
     if (!isEdit || productId === undefined) {
-      requestAnimationFrame(() => {
-        barcodeRef.current?.focus()
-      })
+      async function prepareNewProduct(): Promise<void> {
+        try {
+          setError('')
+
+          /*
+           * If a barcode was supplied externally
+           * (for example from a scanner), keep it.
+           *
+           * Otherwise generate our internal barcode.
+           */
+          if (!initialBarcode?.trim()) {
+            const generatedBarcode = await window.kirana.products.generateBarcode()
+
+            setForm((current) => ({
+              ...current,
+              barcode: generatedBarcode
+            }))
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Unable to generate barcode')
+        } finally {
+          requestAnimationFrame(() => {
+            barcodeRef.current?.focus()
+            barcodeRef.current?.select()
+          })
+        }
+      }
+
+      void prepareNewProduct()
 
       return
     }
+
     const currentProductId = productId
+
     async function loadProduct(): Promise<void> {
       try {
         setLoading(true)
@@ -140,11 +168,6 @@ function ProductForm({
       } finally {
         setLoading(false)
 
-        /*
-         * Important:
-         * F3 -> Edit must immediately activate
-         * the keyboard without requiring a mouse click.
-         */
         requestAnimationFrame(() => {
           barcodeRef.current?.focus()
           barcodeRef.current?.select()
@@ -153,7 +176,7 @@ function ProductForm({
     }
 
     void loadProduct()
-  }, [isEdit, productId])
+  }, [isEdit, productId, initialBarcode])
 
   function updateField(field: keyof FormData, value: string): void {
     setForm((current) => ({
@@ -177,7 +200,124 @@ function ProductForm({
     }
   }
 
-  function moveNext(currentIndex: number): void {
+  async function validateFieldBeforeMove(currentIndex: number): Promise<boolean> {
+    /*
+     * Barcode
+     *
+     * Barcode is optional, but when entered it must be unique.
+     */
+    if (currentIndex === 0) {
+      const barcode = form.barcode.trim()
+
+      /*
+       * Empty barcode is allowed.
+       * Move to Product Name normally.
+       */
+      if (!barcode) {
+        return true
+      }
+
+      try {
+        const product = await window.kirana.products.getByBarcode(barcode)
+
+        /*
+         * No product with this barcode exists.
+         */
+        if (!product) {
+          return true
+        }
+
+        /*
+         * While editing, the current product is allowed
+         * to keep its existing barcode.
+         */
+        if (isEdit && productId !== undefined && product.id === productId) {
+          return true
+        }
+
+        /*
+         * Barcode belongs to another product.
+         */
+        setError('A product with this barcode already exists')
+
+        requestAnimationFrame(() => {
+          barcodeRef.current?.focus()
+          barcodeRef.current?.select()
+        })
+
+        return false
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unable to validate barcode')
+
+        requestAnimationFrame(() => {
+          barcodeRef.current?.focus()
+        })
+
+        return false
+      }
+    }
+
+    /*
+     * Product Name
+     */
+    if (currentIndex === 1) {
+      const name = form.name.trim()
+
+      if (!name) {
+        setError('Product name is required')
+
+        requestAnimationFrame(() => {
+          nameRef.current?.focus()
+        })
+
+        return false
+      }
+
+      try {
+        const products = await window.kirana.products.list(500, 'all')
+
+        const duplicate = products.find((product) => {
+          /*
+           * While editing, ignore the current product itself.
+           */
+          if (isEdit && productId !== undefined && product.id === productId) {
+            return false
+          }
+
+          return product.name.trim().toLowerCase() === name.toLowerCase()
+        })
+
+        if (duplicate) {
+          setError('A product with this name already exists')
+
+          requestAnimationFrame(() => {
+            nameRef.current?.focus()
+            nameRef.current?.select()
+          })
+
+          return false
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unable to validate product name')
+
+        requestAnimationFrame(() => {
+          nameRef.current?.focus()
+        })
+
+        return false
+      }
+    }
+
+    return true
+  }
+
+  async function moveNext(currentIndex: number): Promise<void> {
+    const valid = await validateFieldBeforeMove(currentIndex)
+
+    if (!valid) {
+      return
+    }
+
     const nextIndex = currentIndex + 1
 
     if (nextIndex < fieldRefs.length) {
@@ -185,12 +325,6 @@ function ProductForm({
       return
     }
 
-    /*
-     * Final field:
-     * Enter does NOT save directly.
-     *
-     * It opens the reusable confirmation dialog.
-     */
     openSaveConfirmation()
   }
 
@@ -202,55 +336,37 @@ function ProductForm({
     }
   }
 
-  function handleFieldKeyDown(
+  async function handleFieldKeyDown(
     event: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
     index: number
-  ): void {
-    /*
-     * Enter:
-     * move to next field.
-     *
-     * Final field:
-     * open confirmation.
-     */
+  ): Promise<void> {
     if (event.key === 'Enter') {
       event.preventDefault()
       event.stopPropagation()
-      moveNext(index)
+
+      await moveNext(index)
       return
     }
 
     /*
      * Select fields:
-     *
-     * Let ArrowUp / ArrowDown change the
-     * selected option normally.
+     * ArrowUp / ArrowDown change the selected option.
      */
     if (event.currentTarget instanceof HTMLSelectElement) {
       return
     }
 
-    /*
-     * Down arrow:
-     * move to next field when cursor is at
-     * the end of the current text.
-     */
     if (event.key === 'ArrowDown') {
       const input = event.currentTarget
 
       if (input.selectionStart === input.value.length || input.inputMode === 'decimal') {
         event.preventDefault()
-        moveNext(index)
+        await moveNext(index)
       }
 
       return
     }
 
-    /*
-     * Up arrow:
-     * move to previous field when cursor is
-     * at the beginning of the current text.
-     */
     if (event.key === 'ArrowUp') {
       const input = event.currentTarget
 

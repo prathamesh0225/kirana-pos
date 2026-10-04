@@ -1,3 +1,4 @@
+//printer.ipc.ts
 import { ipcMain } from 'electron'
 import { getInstalledPrinters, printTestPage } from '../services/printer.service'
 import { printReceipt, type EscPosReceipt } from '../services/escpos.service'

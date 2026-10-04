@@ -1,6 +1,15 @@
 //preload/index.ts
 import { contextBridge, ipcRenderer } from 'electron'
 
+type SupplierInput = {
+  name: string
+  mobile?: string
+  address?: string
+  gstin?: string
+  openingBalancePaise?: number
+  balanceType?: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
+}
+
 const api = {
   app: {
     getName: () => 'Kirana Mart POS',
@@ -25,6 +34,8 @@ const api = {
 
   products: {
     getByBarcode: (barcode: string) => ipcRenderer.invoke('products:getByBarcode', barcode),
+
+    generateBarcode: () => ipcRenderer.invoke('products:generateBarcode'),
 
     getById: (productId: number) => ipcRenderer.invoke('products:getById', productId),
 
@@ -133,7 +144,10 @@ const api = {
     get: (purchaseId: number) => ipcRenderer.invoke('purchase:get', purchaseId),
 
     update: (purchaseId: number, input: unknown) =>
-      ipcRenderer.invoke('purchase:update', purchaseId, input)
+      ipcRenderer.invoke('purchase:update', purchaseId, input),
+
+    checkInvoiceNumber: (invoiceNumber: string, purchaseId?: number) =>
+      ipcRenderer.invoke('purchase:check-invoice-number', invoiceNumber, purchaseId)
   },
 
   printer: {

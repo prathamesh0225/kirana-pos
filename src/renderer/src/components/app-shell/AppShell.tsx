@@ -1,3 +1,5 @@
+
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode, ReactElement } from 'react'
 import './app-shell.css'
 
@@ -16,7 +18,6 @@ const menuGroups = [
       { id: 'billing', label: 'Billing F1', icon: '▤' },
       { id: 'history', label: 'Bill History F2', icon: '▥' },
       { id: 'items', label: 'Items F3', icon: '□' }
-      // { id: 'returns', label: 'Returns', icon: '↩' }
     ]
   },
   {
@@ -46,6 +47,165 @@ export function AppShell({
   onQuit,
   children
 }: AppShellProps): ReactElement {
+  const menuItems = useMemo(() => menuGroups.flatMap((group) => group.items), [])
+
+  /*
+   * This is separate from activeMenu.
+   *
+   * activeMenu:
+   *   The screen currently open.
+   *
+   * keyboardSelectedMenu:
+   *   The item currently highlighted by ↑ / ↓.
+   *
+   * This prevents ↓ from immediately opening the next screen.
+   */
+  const [keyboardSelectedMenu, setKeyboardSelectedMenu] = useState(activeMenu)
+
+  /*
+   * Whenever the application opens a screen through mouse click,
+   * F-key, or another action, keep keyboard navigation synchronized
+   * with that screen.
+   */
+  useEffect(() => {
+    setKeyboardSelectedMenu(activeMenu)
+  }, [activeMenu])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent): void {
+      /*
+       * Do not intercept keyboard navigation while typing
+       * inside an input, textarea, select, or contenteditable element.
+       */
+      const target = event.target
+
+      if (target instanceof HTMLElement) {
+        const tagName = target.tagName
+
+        const isTypingElement =
+          tagName === 'INPUT' ||
+          tagName === 'TEXTAREA' ||
+          tagName === 'SELECT' ||
+          target.isContentEditable
+
+        if (isTypingElement) {
+          return
+        }
+      }
+
+      if (menuItems.length === 0) {
+        return
+      }
+
+      const currentIndex = menuItems.findIndex(
+        (item) => item.id === keyboardSelectedMenu
+      )
+
+      const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0
+
+      /*
+       * ARROW DOWN
+       *
+       * Only move the keyboard highlight.
+       * DO NOT open the screen.
+       */
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+
+        const nextIndex = Math.min(
+          safeCurrentIndex + 1,
+          menuItems.length - 1
+        )
+
+        const nextItem = menuItems[nextIndex]
+
+        if (nextItem) {
+          setKeyboardSelectedMenu(nextItem.id)
+        }
+
+        return
+      }
+
+      /*
+       * ARROW UP
+       *
+       * Only move the keyboard highlight.
+       * DO NOT open the screen.
+       */
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+
+        const previousIndex = Math.max(
+          safeCurrentIndex - 1,
+          0
+        )
+
+        const previousItem = menuItems[previousIndex]
+
+        if (previousItem) {
+          setKeyboardSelectedMenu(previousItem.id)
+        }
+
+        return
+      }
+
+      /*
+       * ENTER
+       *
+       * Open the currently highlighted menu item.
+       */
+      if (event.key === 'Enter') {
+        event.preventDefault()
+
+        onMenuSelect(keyboardSelectedMenu)
+
+        return
+      }
+
+      /*
+       * HOME
+       *
+       * Move highlight to Dashboard.
+       * Do not open it.
+       */
+      if (event.key === 'Home') {
+        event.preventDefault()
+
+        const firstItem = menuItems[0]
+
+        if (firstItem) {
+          setKeyboardSelectedMenu(firstItem.id)
+        }
+
+        return
+      }
+
+      /*
+       * END
+       *
+       * Move highlight to Settings.
+       * Do not open it.
+       */
+      if (event.key === 'End') {
+        event.preventDefault()
+
+        const lastItem = menuItems[menuItems.length - 1]
+
+        if (lastItem) {
+          setKeyboardSelectedMenu(lastItem.id)
+        }
+
+        return
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [keyboardSelectedMenu, menuItems, onMenuSelect])
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -57,42 +217,70 @@ export function AppShell({
         <nav className="sidebar-nav">
           {menuGroups.map((group) => (
             <div className="sidebar-group" key={group.title}>
-              <div className="sidebar-group-title">{group.title}</div>
+              <div className="sidebar-group-title">
+                {group.title}
+              </div>
 
               {group.items.map((item) => {
                 const isActive = activeMenu === item.id
+                const isKeyboardSelected =
+                  keyboardSelectedMenu === item.id
 
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    className={`sidebar-item ${isActive ? 'active' : ''}`}
-                    onClick={() => onMenuSelect(item.id)}
+                    className={[
+                      'sidebar-item',
+                      isActive ? 'active' : '',
+                      isKeyboardSelected ? 'keyboard-selected' : ''
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => {
+                      setKeyboardSelectedMenu(item.id)
+                      onMenuSelect(item.id)
+                    }}
                   >
-                    <span className="sidebar-item-icon">{item.icon}</span>
+                    <span className="sidebar-item-icon">
+                      {item.icon}
+                    </span>
 
-                    <span className="sidebar-item-label">{item.label}</span>
+                    <span className="sidebar-item-label">
+                      {item.label}
+                    </span>
                   </button>
                 )
               })}
             </div>
           ))}
-          <button type="button" className="sidebar-item sidebar-item-quit" onClick={onQuit}>
+
+          <button
+            type="button"
+            className="sidebar-item sidebar-item-quit"
+            onClick={onQuit}
+          >
             <span className="sidebar-item-icon">⏻</span>
-            <span className="sidebar-item-label">Quit Application</span>
+
+            <span className="sidebar-item-label">
+              Quit Application
+            </span>
           </button>
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-footer-name">Kirana Mart POS</div>
+          <div className="sidebar-footer-name">
+            Kirana Mart POS
+          </div>
         </div>
       </aside>
 
       <main className="app-main">
         <header className="app-topbar">
           <div className="app-topbar-title">
-            {menuGroups.flatMap((group) => group.items).find((item) => item.id === activeMenu)
-              ?.label ?? 'Dashboard'}
+            {menuItems.find(
+              (item) => item.id === activeMenu
+            )?.label ?? 'Dashboard'}
           </div>
 
           <div className="app-topbar-right">
@@ -104,11 +292,15 @@ export function AppShell({
               })}
             </span>
 
-            <span className="app-user">Admin</span>
+            <span className="app-user">
+              Admin
+            </span>
           </div>
         </header>
 
-        <section className="app-content">{children}</section>
+        <section className="app-content">
+          {children}
+        </section>
       </main>
     </div>
   )

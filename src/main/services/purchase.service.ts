@@ -4,6 +4,7 @@ import {
   getPurchaseById,
   listPurchases,
   updatePurchase,
+  findPurchaseByInvoiceNumber,
   type CreatePurchaseInput,
   type PurchaseDetail,
   type PurchaseHistoryRow,
@@ -32,4 +33,26 @@ export function modifyPurchase(purchaseId: number, input: CreatePurchaseInput): 
   }
 
   return updatePurchase(purchaseId, input)
+}
+
+export function checkInvoiceNumber(invoiceNumber: string, purchaseId?: number): boolean {
+  const value = invoiceNumber.trim()
+
+  if (!value) {
+    return false
+  }
+
+  const existingPurchase = findPurchaseByInvoiceNumber(value)
+
+  if (!existingPurchase) {
+    return false
+  }
+
+  // While editing, allow the invoice number belonging
+  // to the current purchase.
+  if (purchaseId !== undefined && existingPurchase.id === purchaseId) {
+    return false
+  }
+
+  return true
 }

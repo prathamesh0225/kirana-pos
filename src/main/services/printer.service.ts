@@ -1,3 +1,4 @@
+//printer.service.ts
 import { BrowserWindow } from 'electron'
 import { buildReceiptHtml, type ReceiptData } from './receipt.service'
 

@@ -1,3 +1,4 @@
+//migrations.ts
 import path from 'node:path'
 
 import { getDatabase, getDatabaseBackupDirectory } from './index'

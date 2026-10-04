@@ -1,3 +1,4 @@
+//products.ipc.ts
 import { ipcMain } from 'electron'
 
 import {
@@ -10,7 +11,8 @@ import {
   restoreProduct,
   searchProductCatalog,
   getProductByIdAnyStatus,
-  adjustStock
+  adjustStock,
+  generateProductBarcode
 } from '../services/product.service'
 
 import { getStockHistory } from '../services/stock.service'
@@ -18,6 +20,10 @@ import { getStockHistory } from '../services/stock.service'
 export function registerProductIpc(): void {
   ipcMain.handle('products:getByBarcode', (_, barcode: string) => {
     return getProductByBarcode(barcode)
+  })
+
+  ipcMain.handle('products:generateBarcode', () => {
+    return generateProductBarcode()
   })
 
   ipcMain.handle('products:getById', (_, productId: number) => {

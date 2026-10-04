@@ -1,3 +1,4 @@
+//index.d.ts
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 type PrinterInfo = {
@@ -133,6 +134,8 @@ declare global {
 
       products: {
         getByBarcode: (barcode: string) => Promise<ProductRecord | undefined>
+
+        generateBarcode: () => Promise<string>
 
         getById: (productId: number) => Promise<ProductRecord | undefined>
 
@@ -372,6 +375,8 @@ declare global {
           balancePaise: number
           paymentMethod: 'CASH' | 'UPI' | 'CREDIT'
         }>
+
+        checkInvoiceNumber: (invoiceNumber: string, excludePurchaseId?: number) => Promise<boolean>
       }
 
       printer: {

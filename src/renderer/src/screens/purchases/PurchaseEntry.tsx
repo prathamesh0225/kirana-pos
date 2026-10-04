@@ -1407,6 +1407,49 @@ export default function PurchaseEntry({
    * ---------------------------------------------------------
    */
 
+  async function validateInvoiceNumberOnEnter(): Promise<boolean> {
+    const value = invoiceNumber.trim()
+
+    if (!value) {
+      setSaveMessage('Invoice number is required.')
+
+      requestAnimationFrame(() => {
+        invoiceRef.current?.focus()
+      })
+
+      return false
+    }
+
+    try {
+      const duplicate = await window.kirana.purchase.checkInvoiceNumber(value, purchaseId)
+
+      if (duplicate) {
+        setSaveMessage(`Invoice number "${value}" already exists.`)
+
+        requestAnimationFrame(() => {
+          invoiceRef.current?.focus()
+          invoiceRef.current?.select()
+        })
+
+        return false
+      }
+
+      setSaveMessage('')
+
+      return true
+    } catch (error) {
+      console.error('Invoice number validation failed:', error)
+
+      setSaveMessage('Unable to validate invoice number.')
+
+      requestAnimationFrame(() => {
+        invoiceRef.current?.focus()
+      })
+
+      return false
+    }
+  }
+
   function validatePurchase(): string | null {
     if (!supplier) {
       return 'Please select a supplier.'
@@ -1852,27 +1895,22 @@ export default function PurchaseEntry({
                 event.preventDefault()
                 event.stopPropagation()
 
-                if (!invoiceNumber.trim()) {
-                  setSaveMessage('Invoice number is required.')
+                void (async () => {
+                  const valid = await validateInvoiceNumberOnEnter()
 
-                  requestAnimationFrame(() => {
-                    invoiceRef.current?.focus()
-                  })
+                  if (!valid) {
+                    return
+                  }
 
-                  return
-                }
-
-                /*
-                 * Invoice is valid.
-                 * Continue with the normal Purchase Entry flow.
-                 */
-                setSaveMessage('')
-
-                // If you want Enter to move to the first product row:
-                setSelectedIndex(0)
-                setActiveField('product')
-                setBarcodeInput('')
-                setEditInput('')
+                  /*
+                   * Invoice is unique.
+                   * Continue to Product field.
+                   */
+                  setSelectedIndex(0)
+                  setActiveField('product')
+                  setBarcodeInput('')
+                  setEditInput('')
+                })()
               }}
             />
           </div>

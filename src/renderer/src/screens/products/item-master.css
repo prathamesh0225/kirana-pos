@@ -470,3 +470,8 @@
 
   white-space: nowrap;
 }
+.item-master-search-error {
+  color: #dc2626;
+  font-weight: 600;
+  white-space: nowrap;
+}

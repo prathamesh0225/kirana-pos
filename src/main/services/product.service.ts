@@ -1,11 +1,14 @@
+//product.service.ts
 import {
   adjustProductStock,
   createProduct,
   disableProduct,
   enableProduct,
   findProductByBarcode,
+  findProductByName,
   findProductById,
   findProductByIdAnyStatus,
+  generateUniqueBarcode,
   listProducts,
   searchProducts,
   updateProduct,
@@ -38,6 +41,10 @@ const DEFAULT_QUANTITY_PRECISION: Record<ProductUnit, number> = {
   BOX: 0,
   PACK: 0,
   DOZEN: 0
+}
+
+export function generateProductBarcode(): string {
+  return generateUniqueBarcode()
 }
 
 function requireValidUnit(unit?: string): ProductUnit {
@@ -184,6 +191,12 @@ function validateProductData(data: {
 export function addProduct(data: CreateProductData): ProductRecord {
   const validated = validateProductData(data)
 
+  const existingProductWithSameName = findProductByName(validated.name)
+
+  if (existingProductWithSameName) {
+    throw new Error('A product with this name already exists')
+  }
+
   const stockQuantity = data.stockQuantity ?? 0
 
   requireValidQuantity(stockQuantity, validated.quantityPrecision, 'Stock quantity')
@@ -217,6 +230,12 @@ export function editProduct(productId: number, data: UpdateProductData): Product
   }
 
   const validated = validateProductData(data)
+
+  const existingProductWithSameName = findProductByName(validated.name, productId)
+
+  if (existingProductWithSameName) {
+    throw new Error('A product with this name already exists')
+  }
 
   if (existingProduct.stock_quantity !== 0) {
     if (existingProduct.unit !== validated.unit) {

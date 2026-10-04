@@ -57,6 +57,9 @@ function ItemMaster({
     toDate: getToday()
   })
 
+  // const [allProducts, setAllProducts] = useState<ProductRecord[]>([])
+  const [searchError, setSearchError] = useState('')
+
   const searchRef = useRef<HTMLInputElement>(null)
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
 
@@ -65,9 +68,7 @@ function ItemMaster({
       setLoading(true)
       setError('')
 
-      const result = searchTerm.trim()
-        ? await window.kirana.products.search(searchTerm, 100, statusFilter)
-        : await window.kirana.products.list(100, statusFilter)
+      const result = await window.kirana.products.list(100, statusFilter)
 
       setProducts(result)
       setSelectedIndex(0)
@@ -82,8 +83,14 @@ function ItemMaster({
 
   useEffect(() => {
     void loadProducts()
-  }, [searchTerm, statusFilter])
+  }, [statusFilter])
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchError('')
+      setSelectedIndex(0)
+    }
+  }, [searchTerm])
   useEffect(() => {
     searchRef.current?.focus()
   }, [])
@@ -109,23 +116,18 @@ function ItemMaster({
       }
 
       const headerHeight = header.getBoundingClientRect().height
-
       const rowRect = row.getBoundingClientRect()
       const containerRect = container.getBoundingClientRect()
 
+      // Visible table area starts below the sticky header.
       const visibleTop = containerRect.top + headerHeight
       const visibleBottom = containerRect.bottom
 
-      // Row is hidden underneath the sticky header.
-      if (rowRect.top < visibleTop) {
-        container.scrollTop -= visibleTop - rowRect.top
-        return
-      }
+      // Center the selected row inside the visible table area.
+      const visibleCenter = (visibleTop + visibleBottom) / 2
+      const rowCenter = (rowRect.top + rowRect.bottom) / 2
 
-      // Row is below the visible list area.
-      if (rowRect.bottom > visibleBottom) {
-        container.scrollTop += rowRect.bottom - visibleBottom
-      }
+      container.scrollTop += rowCenter - visibleCenter
     })
   }, [selectedIndex])
 
@@ -254,6 +256,23 @@ function ItemMaster({
 
         return
       }
+
+      if (event.key === 'Backspace') {
+        event.preventDefault()
+
+        // Clear the entire search box with one Backspace press.
+        if (searchTerm) {
+          setSearchTerm('')
+          setSearchError('')
+          setSelectedIndex(0)
+
+          requestAnimationFrame(() => {
+            searchRef.current?.focus()
+          })
+        }
+
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -275,8 +294,47 @@ function ItemMaster({
     stockHistoryProduct
   ])
 
-  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchTerm(event.target.value)
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const nextValue = event.target.value
+    const query = nextValue.trim().toLowerCase()
+
+    /*
+     * Allow clearing the search.
+     */
+    if (!query) {
+      setSearchTerm('')
+      setSearchError('')
+      setSelectedIndex(0)
+      return
+    }
+
+    /*
+     * Check the complete product list before accepting
+     * the newly typed character.
+     */
+    const matchingIndex = products.findIndex((product) => {
+      const name = product.name.trim().toLowerCase()
+      const barcode = (product.barcode ?? '').trim().toLowerCase()
+
+      return name.startsWith(query) || barcode.startsWith(query)
+    })
+
+    /*
+     * Invalid next character:
+     * do NOT update searchTerm.
+     */
+    if (matchingIndex === -1) {
+      setSearchError('No such product found')
+      return
+    }
+
+    /*
+     * Valid search:
+     * accept the character and select the first match.
+     */
+    setSearchTerm(nextValue)
+    setSearchError('')
+    setSelectedIndex(matchingIndex)
   }
 
   /*
@@ -352,6 +410,8 @@ function ItemMaster({
           autoComplete="off"
           spellCheck={false}
         />
+
+        {searchError && <span className="item-master-search-error">{searchError}</span>}
 
         <label htmlFor="status-filter">Status:</label>
 
