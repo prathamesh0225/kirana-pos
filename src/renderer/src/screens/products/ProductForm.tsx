@@ -54,7 +54,7 @@ function ProductForm({
     mrp: '',
     sellingPrice: '',
     purchasePrice: '',
-    lowStockLevel: '',
+    lowStockLevel: '2',
     stockQuantity: ''
   })
 
@@ -274,7 +274,7 @@ function ProductForm({
       }
 
       try {
-        const products = await window.kirana.products.list(500, 'all')
+        const products = await window.kirana.products.list(10000, 'all')
 
         const duplicate = products.find((product) => {
           /*

@@ -39,7 +39,7 @@ function buildBarcodeTspl(input: BarcodePrintInput): string {
   const mrp = escapeTsplText(formatRupees(input.mrpPaise))
   const rate = escapeTsplText(formatRupees(input.sellingPricePaise))
 
-  const labelWidth = 400
+//   const labelWidth = 400
   const labelHeight = 200
 
   const leftMargin = 20
@@ -95,7 +95,7 @@ function buildBarcodeTspl(input: BarcodePrintInput): string {
      */
     commands.push(`TEXT ${leftMargin},${shopY},"3",0,1,1,"${shopName}"`)
     commands.push(`TEXT ${leftMargin},${productY},"${productFont}",0,1,1,"${productName}"`)
-    commands.push(`TEXT ${leftMargin},${priceY},"2",0,1,1,"MRP:${mrp} R:${rate}"`)
+    commands.push(`TEXT ${leftMargin},${priceY},"2",0,1,1,"MRP:${mrp} Rate:${rate}"`)
 
     if (extraText) {
       commands.push(`TEXT ${leftMargin},${extraY},"1",0,1,1,"${extraText}"`)
@@ -110,7 +110,7 @@ function buildBarcodeTspl(input: BarcodePrintInput): string {
      */
     commands.push(`TEXT ${rightLabelX},${shopY},"3",0,1,1,"${shopName}"`)
     commands.push(`TEXT ${rightLabelX},${productY},"${productFont}",0,1,1,"${productName}"`)
-    commands.push(`TEXT ${rightLabelX},${priceY},"2",0,1,1,"MRP:${mrp} R:${rate}"`)
+    commands.push(`TEXT ${rightLabelX},${priceY},"2",0,1,1,"MRP:${mrp} Rate:${rate}"`)
 
     if (extraText) {
       commands.push(`TEXT ${rightLabelX},${extraY},"1",0,1,1,"${extraText}"`)

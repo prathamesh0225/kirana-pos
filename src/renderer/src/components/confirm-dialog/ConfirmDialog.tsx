@@ -32,7 +32,10 @@ function ConfirmDialog({
     })
 
     function handleKeyDown(event: KeyboardEvent): void {
+      // Confirm dialog is modal: don't allow keyboard events
+      // to reach the screen underneath it.
       event.preventDefault()
+      event.stopPropagation()
       event.stopImmediatePropagation()
 
       if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
@@ -60,11 +63,14 @@ function ConfirmDialog({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    // Capture phase is important here.
+    // It prevents ItemMaster/Billing global key handlers
+    // from seeing Enter/Escape while this dialog is open.
+    window.addEventListener('keydown', handleKeyDown, true)
 
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [onConfirm, onCancel, selectedAction])
 

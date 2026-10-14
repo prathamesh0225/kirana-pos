@@ -1,12 +1,6 @@
 //index.d.ts
 import { ElectronAPI } from '@electron-toolkit/preload'
 
-type PrinterInfo = {
-  name: string
-  displayName: string
-  description: string
-}
-
 type ProductRecord = {
   id: number
   barcode: string | null
@@ -63,19 +57,6 @@ type StockMovementRecord = {
   reason: string | null
 }
 
-type Supplier = {
-  id: number
-  name: string
-  mobile: string | null
-  address: string | null
-  gstin: string | null
-  openingBalancePaise: number
-  balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
 type SupplierInput = {
   name: string
   mobile?: string
@@ -86,6 +67,12 @@ type SupplierInput = {
 }
 
 declare global {
+  type PrinterInfo = {
+    name: string
+    displayName: string
+    description: string
+  }
+
   type Supplier = {
     id: number
     name: string
@@ -387,6 +374,17 @@ declare global {
         printReceipt: (printerName: string, receipt: EscPosReceipt) => Promise<void>
 
         rawReceiptTest: (printerName: string) => Promise<void>
+
+        printBarcode: (input: {
+          printerName: string
+          barcode: string
+          shopName: string
+          productName: string
+          mrpPaise: number
+          sellingPricePaise: number
+          quantity: number
+          extraText?: string
+        }) => Promise<void>
       }
 
       settings: {

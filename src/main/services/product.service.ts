@@ -94,10 +94,10 @@ export function getProductByIdAnyStatus(productId: number): ProductRecord | unde
 }
 
 export function listProductCatalog(
-  limit = 100,
+  limit = 10000,
   status: 'active' | 'disabled' | 'all' = 'active'
 ): ProductRecord[] {
-  if (!Number.isInteger(limit) || limit <= 0 || limit > 500) {
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 10000) {
     throw new Error('Invalid product list limit')
   }
 
@@ -110,7 +110,7 @@ export function listProductCatalog(
 
 export function searchProductCatalog(
   searchTerm: string,
-  limit = 20,
+  limit = 1000,
   status: 'active' | 'disabled' | 'all' = 'active'
 ): ProductRecord[] {
   const cleanSearchTerm = searchTerm.trim()
@@ -119,7 +119,7 @@ export function searchProductCatalog(
     return []
   }
 
-  if (!Number.isInteger(limit) || limit <= 0 || limit > 100) {
+  if (!Number.isInteger(limit) || limit <= 0 || limit > 1000) {
     throw new Error('Invalid search limit')
   }
 

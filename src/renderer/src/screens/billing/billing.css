@@ -1,3 +1,9 @@
+/* =========================================================
+   BILLING SCREEN
+   Old-school ERP / Tally-style layout
+   Visual style aligned with Purchase Entry
+   ========================================================= */
+
 .billing-screen {
   width: 100%;
   height: 100%;
@@ -7,8 +13,8 @@
   flex-direction: column;
   overflow: hidden;
 
-  background: #dce8f0;
-  color: #172b3b;
+  background: #f4f6f8;
+  color: #111827;
 
   font-family: "Courier New", Consolas, monospace;
   font-size: 14px;
@@ -22,17 +28,20 @@
   height: 30px;
   flex: 0 0 30px;
   margin: 5px 18px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   padding: 0 14px;
 
-  background: #173f66;
+  background: #31516b;
   color: #ffffff;
 
+  border-bottom: 1px solid #1f384b;
+
   font-weight: 700;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .billing-date {
@@ -52,9 +61,9 @@
 
   margin: 0 18px;
 
-  border-bottom: 1px solid #7890a2;
+  background: #edf2f5;
 
-  background: #d7e5ee;
+  border-bottom: 1px solid #aebdca;
 }
 
 .billing-header-column {
@@ -62,7 +71,7 @@
 }
 
 .billing-header-column + .billing-header-column {
-  border-left: 1px solid #8ea3b2;
+  border-left: 1px solid #c0ccd5;
 }
 
 .billing-field {
@@ -75,6 +84,9 @@
 .billing-field label {
   width: 90px;
   flex: 0 0 90px;
+
+  color: #273746;
+
   font-weight: 700;
 }
 
@@ -86,19 +98,25 @@
 
   padding: 2px 6px;
 
-  border: 1px solid #8499a8;
+  border: 1px solid #8da1b1;
   border-radius: 0;
 
   background: #ffffff;
+  color: #111827;
 
   font-family: inherit;
-  font-size: 14px;
+  font-size: 18px;
 
   outline: none;
 }
 
 .billing-field input:focus {
-  border-color: #173f66;
+  border-color: #31516b;
+  background: #31516b;
+  color: #ffffff;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
 }
 
 /* =========================================================
@@ -116,7 +134,7 @@
 
   overflow: hidden;
 
-  background: #eef3f6;
+  background: #ffffff;
 }
 
 .billing-items-scroll {
@@ -126,7 +144,7 @@
   overflow-x: hidden;
   overflow-y: auto;
 
-  scrollbar-width: none;
+  scrollbar-width: auto;
 }
 
 .billing-items-scroll .billing-table {
@@ -134,13 +152,30 @@
 }
 
 .billing-items-scroll .billing-table tbody td {
-  border-right: 1px solid #a3b3bf;
-  border-bottom: 1px solid #b8c5ce;
+  border-right: 1px solid #d2d9de;
+  border-bottom: 1px solid #d2d9de;
 }
 
 .billing-items-scroll::-webkit-scrollbar {
-  display: none;
+  width: 14px;
 }
+
+.billing-items-scroll::-webkit-scrollbar-track {
+  background: #e4e9ed;
+}
+
+.billing-items-scroll::-webkit-scrollbar-thumb {
+  background: #9aaab6;
+  border: 2px solid #e4e9ed;
+}
+
+.billing-items-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7f929f;
+}
+
+/* =========================================================
+   BILLING TABLE
+   ========================================================= */
 
 .billing-table {
   width: 100%;
@@ -151,8 +186,8 @@
 
 .billing-table th,
 .billing-table td {
-  border-right: 1px solid #a3b3bf;
-  border-bottom: 1px solid #b8c5ce;
+  border-right: 1px solid #d2d9de;
+  border-bottom: 1px solid #d2d9de;
 }
 
 .billing-table th {
@@ -160,9 +195,11 @@
 
   padding: 4px 8px;
 
-  background: #b9cfdd;
+  background: #dbe5eb;
+  color: #17232d;
 
-  color: #173650;
+  border-right: 1px solid #aebdca;
+  border-bottom: 1px solid #8799a8;
 
   font-size: 20px;
   font-weight: 700;
@@ -175,7 +212,8 @@
 
   padding: 3px 8px;
 
-  background: #f0f4f6;
+  background: #ffffff;
+  color: #111827;
 
   font-size: 20px;
 }
@@ -189,9 +227,20 @@
   width: 10.8%;
 }
 
+/* =========================================================
+   SELECTED ROW
+   ========================================================= */
+
 .billing-row-selected td {
-  background: #172f47;
-  color: #ffffff;
+  background: #d9eaf6;
+  color: #111827;
+
+  border-top: 1px solid #31516b;
+  border-bottom: 1px solid #31516b;
+}
+
+.billing-row-selected td:first-child {
+  border-left: 3px solid #31516b;
 }
 
 /* =========================================================
@@ -212,15 +261,23 @@
 
   padding: 2px 6px;
 
-  border: 1px solid #718594;
+  border: 1px solid #31516b;
   border-radius: 0;
 
   background: #ffffff;
+  color: #111827;
 
   font-family: inherit;
   font-size: 14px;
 
   outline: none;
+}
+
+.product-entry input:focus {
+  border-color: #31516b;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
 }
 
 .product-entry span {
@@ -241,7 +298,9 @@
 
 .empty-row td {
   height: 32px;
-  background: #f0f4f6;
+
+  background: #ffffff;
+  color: transparent;
 }
 
 /* =========================================================
@@ -251,6 +310,7 @@
 .billing-summary {
   flex: 0 0 250px;
   height: 250px;
+
   box-sizing: border-box;
 
   margin: 0 18px 8px;
@@ -261,8 +321,9 @@
 
   padding: 18px 24px;
 
-  border: 1px solid #758b9c;
-  background: #d9e6ee;
+  border: 1px solid #aebdca;
+
+  background: #edf2f5;
 }
 
 /*
@@ -292,10 +353,13 @@
 }
 
 .billing-summary > div span {
+  color: #273746;
   font-weight: 700;
 }
 
 .billing-summary > div strong {
+  color: #111827;
+
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -307,7 +371,7 @@
 
   padding-top: 9px !important;
 
-  border-top: 1px solid #718594;
+  border-top: 1px solid #8799a8;
 
   font-size: 24px !important;
   font-weight: 700;
@@ -323,7 +387,8 @@
 
 .billing-footer {
   height: 35px;
-  margin:1px 18px;
+  margin: 1px 18px;
+
   flex: 0 0 30px;
 
   display: flex;
@@ -333,8 +398,11 @@
 
   padding: 0 14px;
 
-  background: #173f66;
-  color: #ffffff;
+  background: #dbe5eb;
+  color: #273746;
+
+  border-top: 1px solid #8799a8;
+  border-bottom: 1px solid #aebdca;
 
   font-size: 15px;
 
@@ -342,7 +410,7 @@
 }
 
 .product-not-found {
-  color: #ffdddd;
+  color: #8b0000;
   font-weight: 700;
 }
 
@@ -357,8 +425,10 @@
 
   padding: 0 10px;
 
-  background: #5a2020;
-  color: #ffffff;
+  border: 1px solid #c68b8b;
+
+  background: #fff0f0;
+  color: #8b0000;
 
   font-size: 12px;
   font-weight: 700;
@@ -374,10 +444,11 @@
 
   box-sizing: border-box;
 
-  border: 1px solid #315a7d;
+  border: 1px solid #31516b;
+  border-radius: 0;
 
   background: #ffffff;
-  color: #172b3b;
+  color: #111827;
 
   padding: 1px 5px;
 
@@ -389,8 +460,12 @@
 }
 
 .billing-number-input:focus {
-  border: 2px solid #173f66;
+  border-color: #31516b;
+
   padding: 0 4px;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
 }
 
 /* =========================================================
@@ -402,10 +477,10 @@
 
   padding: 8px 12px;
 
-  border: 2px solid #b00020;
+  border: 1px solid #c68b8b;
 
   background: #fff0f0;
-  color: #b00020;
+  color: #8b0000;
 
   font-size: 14px;
   font-weight: 700;
@@ -433,9 +508,9 @@
 .payment-dialog {
   width: 520px;
 
-  background: #f4f4f4;
+  background: #f4f6f8;
 
-  border: 2px solid #333;
+  border: 2px solid #31516b;
 
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 
@@ -450,9 +525,10 @@
 
   padding: 0 10px;
 
-  background: #d9d9d9;
+  background: #31516b;
+  color: #ffffff;
 
-  border-bottom: 1px solid #777;
+  border-bottom: 1px solid #1f384b;
 
   font-size: 15px;
   font-weight: 700;
@@ -464,9 +540,9 @@
 
   padding: 8px 10px;
 
-  background: #eeeeee;
+  background: #edf2f5;
 
-  border-bottom: 1px solid #aaa;
+  border-bottom: 1px solid #aebdca;
 }
 
 .payment-header span {
@@ -492,7 +568,7 @@
 
   padding: 4px 12px;
 
-  border-bottom: 1px solid #d0d0d0;
+  border-bottom: 1px solid #d2d9de;
 }
 
 .payment-row label,
@@ -508,11 +584,10 @@
 
   padding: 3px 7px;
 
-  border: 1px solid #777;
+  border: 1px solid #31516b;
 
   background: #ffffff;
-
-  color: #000000;
+  color: #111827;
 
   font-family: inherit;
   font-size: 16px;
@@ -524,16 +599,20 @@
 }
 
 .payment-row input:focus {
-  border: 2px solid #333;
-  background: #fffde8;
+  border: 2px solid #31516b;
+
+  background: #ffffff;
+
+  outline: 2px solid #9bb6ca;
+  outline-offset: -2px;
 }
 
 .payment-active-row {
-  background: #f0f0f0;
+  background: #d9eaf6;
 }
 
 .payment-total {
-  background: #e5e5e5;
+  background: #dbe5eb;
 
   font-size: 16px;
   font-weight: 700;
@@ -544,11 +623,11 @@
 
   padding: 7px 10px;
 
-  border: 1px solid #b00020;
+  border: 1px solid #c68b8b;
 
   background: #fff0f0;
 
-  color: #b00020;
+  color: #8b0000;
 
   font-weight: 700;
 }
@@ -563,9 +642,9 @@
 
   padding: 0 10px;
 
-  background: #dedede;
+  background: #dbe5eb;
 
-  border-top: 1px solid #888;
+  border-top: 1px solid #8799a8;
 
   font-size: 12px;
 }
@@ -586,11 +665,11 @@
 
   padding: 0 14px;
 
-  border: 1px solid #777;
-  border-radius: 2px;
+  border: 1px solid #8da1b1;
+  border-radius: 0;
 
-  background: #e6e6e6;
-  color: #111;
+  background: #dbe5eb;
+  color: #273746;
 
   font-family: inherit;
   font-size: 13px;
@@ -604,11 +683,12 @@
 /* Keyboard-selected button */
 
 .historical-billing-footer button.billing-action-selected {
-  background: #1f4e79;
+  background: #31516b;
   color: #ffffff;
 
-  border: 2px solid #000;
-  outline: 2px solid #ffd400;
+  border: 2px solid #1f384b;
+
+  outline: 2px solid #9bb6ca;
   outline-offset: 1px;
 
   font-weight: 800;
@@ -617,20 +697,20 @@
 /* Mouse hover */
 
 .historical-billing-footer button:hover {
-  background: #d2d2d2;
+  background: #edf2f5;
 }
 
 /* Keep keyboard-selected appearance stronger than hover */
 
 .historical-billing-footer button.billing-action-selected:hover {
-  background: #1f4e79;
+  background: #31516b;
   color: #ffffff;
 }
 
 /* Keyboard focus */
 
 .historical-billing-footer button:focus-visible {
-  outline: 2px solid #ffd400;
+  outline: 2px solid #9bb6ca;
   outline-offset: 2px;
 }
 

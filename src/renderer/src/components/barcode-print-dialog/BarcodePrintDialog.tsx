@@ -65,27 +65,27 @@ function BarcodePrintDialog({
    * ---------------------------------------------------------
    */
 
-//   useEffect(() => {
-//     if (!open) {
-//       return
-//     }
+  //   useEffect(() => {
+  //     if (!open) {
+  //       return
+  //     }
 
-//     function handleKeyDown(event: KeyboardEvent): void {
-//       if (event.key === 'Escape') {
-//         event.preventDefault()
+  //     function handleKeyDown(event: KeyboardEvent): void {
+  //       if (event.key === 'Escape') {
+  //         event.preventDefault()
 
-//         if (!printing) {
-//           onClose()
-//         }
-//       }
-//     }
+  //         if (!printing) {
+  //           onClose()
+  //         }
+  //       }
+  //     }
 
-//     window.addEventListener('keydown', handleKeyDown)
+  //     window.addEventListener('keydown', handleKeyDown)
 
-//     return () => {
-//       window.removeEventListener('keydown', handleKeyDown)
-//     }
-//   }, [open, printing, onClose])
+  //     return () => {
+  //       window.removeEventListener('keydown', handleKeyDown)
+  //     }
+  //   }, [open, printing, onClose])
 
   /*
    * ---------------------------------------------------------
@@ -142,6 +142,14 @@ function BarcodePrintDialog({
       return
     }
 
+    if (parsedQuantity > 10) {
+      setError('Maximum 10 rows can be printed at a time.')
+
+      quantityInputRef.current?.focus()
+      quantityInputRef.current?.select()
+      return
+    }
+
     if (!printerName) {
       setError('Select the barcode printer.')
       return
@@ -172,7 +180,8 @@ function BarcodePrintDialog({
          *
          * 1 = 2 barcodes
          * 2 = 4 barcodes
-         * 3 = 6 barcodes
+         * ...
+         * 10 = 20 barcodes maximum
          */
         quantity: parsedQuantity,
 
@@ -188,7 +197,6 @@ function BarcodePrintDialog({
       setPrinting(false)
     }
   }
-
   /*
    * ---------------------------------------------------------
    * DON'T RENDER
@@ -322,10 +330,7 @@ function BarcodePrintDialog({
               }}
               disabled={printing}
             />
-            <small>
-              1 row = 2 barcodes&nbsp;&nbsp;•&nbsp;&nbsp; 2 rows = 4
-              barcodes&nbsp;&nbsp;•&nbsp;&nbsp; 3 rows = 6 barcodes
-            </small>
+            <small>1 row = 2 barcodes&nbsp;&nbsp;•&nbsp;&nbsp; Maximum 10 rows = 20 barcodes</small>
           </label>
 
           {/* EXTRA TEXT */}

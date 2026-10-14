@@ -181,7 +181,7 @@ export function findProductByIdAnyStatus(productId: number): ProductRecord | und
 }
 
 export function listProducts(
-  limit = 100,
+  limit = 10000,
   status: 'active' | 'disabled' | 'all' = 'active'
 ): ProductRecord[] {
   const db = getDatabase()
@@ -202,7 +202,7 @@ export function listProducts(
 }
 export function searchProducts(
   searchTerm: string,
-  limit = 20,
+  limit = 1000,
   status: 'active' | 'disabled' | 'all' = 'active'
 ): ProductRecord[] {
   const db = getDatabase()

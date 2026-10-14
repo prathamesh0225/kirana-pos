@@ -1,3 +1,4 @@
+//sale.service.ts
 import { getDatabase } from '../database'
 import { getTodaySalesSummary } from '../repositories/sale.repository'
 

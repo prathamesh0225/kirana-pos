@@ -71,7 +71,7 @@ function ItemMaster({
       setLoading(true)
       setError('')
 
-      const result = await window.kirana.products.list(100, statusFilter)
+      const result = await window.kirana.products.list(10000, statusFilter)
 
       setProducts(result)
       setSelectedIndex(0)

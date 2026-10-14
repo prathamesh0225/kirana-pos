@@ -1,0 +1,13 @@
+v2.0.0 - Kirana POS
+
+Bug 1 - (LOW) When product with different purchase rate but same selling rate creates two different batch selection
+Bug 2 - (HIGH) Modify the bill will result into adding stock to item master when returned.
+Bug 3 - (LOW) There should be limit to barcode printer i.e 10.
+Bug 4 - (HIGH) Fix the limit for sales list, purchase entry, etc.
+
+V3.0.0 - Implementations
+
+1. Display Low Stock in Dashboard and caution sign in item master
+2. Sales Report and Profit Reports 
+3. Customer Details management 
+4. Loyalty Points
