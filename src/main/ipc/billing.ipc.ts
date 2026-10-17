@@ -1,3 +1,4 @@
+//billing.ipc.ts
 import { ipcMain } from 'electron'
 import { getDatabase } from '../database'
 import { allocateNextBillNumberForSlot, getBillingSlots } from '../repositories/bill.repository'

@@ -418,39 +418,6 @@ function ItemMaster({
         </div>
       </div>
 
-      <div className="item-master-search-row">
-        <label htmlFor="item-search">Search:</label>
-
-        <input
-          ref={searchRef}
-          id="item-search"
-          type="text"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          autoComplete="off"
-          spellCheck={false}
-        />
-
-        {searchError && <span className="item-master-search-error">{searchError}</span>}
-
-        <label htmlFor="status-filter">Status:</label>
-
-        <select
-          id="status-filter"
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(event.target.value as 'active' | 'disabled' | 'all')
-          }}
-        >
-          <option value="active">Active</option>
-
-          <option value="disabled">Disabled</option>
-
-          <option value="all">All</option>
-        </select>
-
-        <span className="item-count">{products.length} items</span>
-      </div>
 
       <div className="item-master-table-wrap">
         <table className="item-master-table">
@@ -528,6 +495,40 @@ function ItemMaster({
               })}
           </tbody>
         </table>
+      </div>
+
+      <div className="item-master-search-row">
+        <label htmlFor="item-search">Search:</label>
+
+        <input
+          ref={searchRef}
+          id="item-search"
+          type="text"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          autoComplete="off"
+          spellCheck={false}
+        />
+
+        {searchError && <span className="item-master-search-error">{searchError}</span>}
+
+        <label htmlFor="status-filter">Status:</label>
+
+        <select
+          id="status-filter"
+          value={statusFilter}
+          onChange={(event) => {
+            setStatusFilter(event.target.value as 'active' | 'disabled' | 'all')
+          }}
+        >
+          <option value="active">Active</option>
+
+          <option value="disabled">Disabled</option>
+
+          <option value="all">All</option>
+        </select>
+
+        <span className="item-count">{products.length} items</span>
       </div>
 
       <div className="item-master-footer">

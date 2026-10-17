@@ -1,3 +1,4 @@
+//bill.repository.ts
 import type Database from 'better-sqlite3'
 
 export type BillingSlot = {
@@ -138,4 +139,105 @@ export function allocateNextBillNumberForSlot(db: Database.Database, slotId: 0 |
   })
 
   return transaction()
+}
+
+/**
+ * Ensures that a bill number is available for a new sale.
+ *
+ * If the supplied bill number is already present in sales,
+ * the billing slot holding that number is advanced to the
+ * next unused sequence number.
+ *
+ * This function is intended to be called from an existing
+ * database transaction.
+ */
+export function ensureAvailableBillNumber(db: Database.Database, billNumber: string): string {
+  const existingSale = db
+    .prepare(
+      `
+      SELECT 1
+      FROM sales
+      WHERE bill_number = ?
+      LIMIT 1
+    `
+    )
+    .get(billNumber)
+
+  // Current bill number is available.
+  if (!existingSale) {
+    return billNumber
+  }
+
+  /*
+   * The current bill number has already been used.
+   * Find the billing slot that is holding it.
+   */
+  const slot = db
+    .prepare(
+      `
+      SELECT slot_id
+      FROM billing_slots
+      WHERE bill_number = ?
+      LIMIT 1
+    `
+    )
+    .get(billNumber) as { slot_id: 0 | 1 } | undefined
+
+  if (!slot) {
+    throw new Error(`Bill number ${billNumber} is already used, but no billing slot owns it`)
+  }
+
+  const getNextNumber = db.prepare(`
+    SELECT next_number
+    FROM bill_number_sequence
+    WHERE id = 1
+  `)
+
+  const updateSequence = db.prepare(`
+    UPDATE bill_number_sequence
+    SET next_number = next_number + 1
+    WHERE id = 1
+  `)
+
+  const updateSlot = db.prepare(`
+    UPDATE billing_slots
+    SET bill_number = ?
+    WHERE slot_id = ?
+  `)
+
+  /*
+   * Keep advancing until we find a number that does not
+   * already exist in completed sales.
+   */
+  while (true) {
+    const sequence = getNextNumber.get() as { next_number: number } | undefined
+
+    if (!sequence) {
+      throw new Error('Bill number sequence is not initialized')
+    }
+
+    const newBillNumber = formatBillNumber(sequence.next_number)
+
+    // Consume this sequence number.
+    updateSequence.run()
+
+    const alreadyUsed = db
+      .prepare(
+        `
+        SELECT 1
+        FROM sales
+        WHERE bill_number = ?
+        LIMIT 1
+      `
+      )
+      .get(newBillNumber)
+
+    if (alreadyUsed) {
+      continue
+    }
+
+    updateSlot.run(newBillNumber, slot.slot_id)
+
+    return newBillNumber
+  }
 }

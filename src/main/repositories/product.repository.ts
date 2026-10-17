@@ -79,17 +79,17 @@ export function findProductByBarcode(barcode: string): ProductRecord | undefined
     .get(barcode) as ProductRecord | undefined
 }
 
-const INTERNAL_BARCODE_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-
 function generateBarcodeCandidate(): string {
-  let barcode = ''
-
-  for (let i = 0; i < 7; i++) {
-    const index = Math.floor(Math.random() * INTERNAL_BARCODE_CHARACTERS.length)
-    barcode += INTERNAL_BARCODE_CHARACTERS[index]
-  }
-
-  return barcode
+  /*
+   * Generate an 8-digit numeric barcode.
+   *
+   * Range:
+   * 10000000 - 99999999
+   *
+   * This guarantees exactly 8 digits and avoids
+   * leading-zero barcodes.
+   */
+  return String(Math.floor(10000000 + Math.random() * 90000000))
 }
 
 export function generateUniqueBarcode(): string {

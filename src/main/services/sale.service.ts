@@ -1,6 +1,7 @@
 //sale.service.ts
 import { getDatabase } from '../database'
 import { getTodaySalesSummary } from '../repositories/sale.repository'
+import { ensureAvailableBillNumber } from '../repositories/bill.repository'
 
 export type TodaySalesSummary = {
   totalSalesPaise: number
@@ -70,6 +71,15 @@ export function completeSale(input: CompleteSaleInput): CompleteSaleResult {
     if (!input.lines || input.lines.length === 0) {
       throw new Error('Cannot complete an empty bill')
     }
+
+    /*
+     * ---------------------------------------------------------
+     * Ensure bill number is not already used.
+     *
+     * This repairs a stale billing slot automatically.
+     * ---------------------------------------------------------
+     */
+    const billNumber = ensureAvailableBillNumber(db, input.billNumber)
 
     const totalPaise = input.lines.reduce((total, line) => total + line.amountPaise, 0)
 
@@ -245,7 +255,7 @@ export function completeSale(input: CompleteSaleInput): CompleteSaleResult {
         VALUES (?, ?, ?, ?, ?, ?, ?)
         `
       )
-      .run(input.billNumber, input.customerId ?? null, now, totalPaise, 0, totalPaise, 'completed')
+      .run(billNumber, input.customerId ?? null, now, totalPaise, 0, totalPaise, 'completed')
 
     const saleId = Number(saleResult.lastInsertRowid)
 
@@ -405,7 +415,7 @@ export function completeSale(input: CompleteSaleInput): CompleteSaleResult {
         'SALE',
         saleId,
         now,
-        `Bill ${input.billNumber}`
+        `Bill ${billNumber}`
       )
     }
 
@@ -483,7 +493,7 @@ export function completeSale(input: CompleteSaleInput): CompleteSaleResult {
 
     return {
       saleId,
-      billNumber: input.billNumber
+      billNumber: billNumber
     }
   })
 

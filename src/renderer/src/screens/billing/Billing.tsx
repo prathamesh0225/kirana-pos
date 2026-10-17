@@ -24,7 +24,7 @@ type BillingProps = {
   onHistoricalSaved?: () => void
 }
 
-type BillingField = 'product' | 'quantity' | 'free' | 'rate'
+type BillingField = 'product' | 'mrp' | 'quantity' | 'free' | 'rate'
 type HistoricalAction = 'modify' | 'print' | 'delete'
 
 function formatRupees(paise: number): string {
@@ -136,12 +136,17 @@ function Billing({
   onModifyMode,
   onHistoricalSaved
 }: BillingProps): React.JSX.Element {
+  const [editingBillNumber, setEditingBillNumber] = useState(false)
+  const billNumberInputRef = useRef<HTMLInputElement>(null)
+
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [activeField, setActiveField] = useState<BillingField>('product')
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [barcodeNotFound, setBarcodeNotFound] = useState(false)
 
+  const [editingTemporaryProductName, setEditingTemporaryProductName] = useState(false)
+  const [mrpInput, setMrpInput] = useState('')
   const [rateInput, setRateInput] = useState('')
 
   const [showItemSelector, setShowItemSelector] = useState(false)
@@ -188,6 +193,8 @@ function Billing({
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const quantityInputRef = useRef<HTMLInputElement>(null)
   const freeInputRef = useRef<HTMLInputElement>(null)
+  const temporaryProductNameInputRef = useRef<HTMLInputElement>(null)
+  const mrpInputRef = useRef<HTMLInputElement>(null)
   const rateInputRef = useRef<HTMLInputElement>(null)
 
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
@@ -442,13 +449,39 @@ function Billing({
    */
 
   useEffect(() => {
+    if (!editingBillNumber) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
+      billNumberInputRef.current?.focus()
+      billNumberInputRef.current?.select()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [editingBillNumber])
+
+  useEffect(() => {
     if (showItemSelector || isReadOnly) {
       return
     }
 
     const frame = requestAnimationFrame(() => {
+      const selectedLine = lines[selectedIndex]
+
       if (activeField === 'product') {
+        if (selectedLine?.isTemporary && editingTemporaryProductName) {
+          temporaryProductNameInputRef.current?.focus()
+          return
+        }
+
         barcodeInputRef.current?.focus()
+        return
+      }
+
+      if (activeField === 'mrp') {
+        mrpInputRef.current?.focus()
+        mrpInputRef.current?.select()
         return
       }
 
@@ -471,7 +504,7 @@ function Billing({
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [selectedIndex, activeField, showItemSelector, isReadOnly])
+  }, [selectedIndex, activeField, showItemSelector, isReadOnly, editingTemporaryProductName])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -526,7 +559,40 @@ function Billing({
       return null
     }
 
+    function isEmptyBillingScreen(): boolean {
+      return (
+        !isHistoricalBill &&
+        lines.length === 1 &&
+        lines[0].productId === null &&
+        !lines[0].isTemporary
+      )
+    }
+
     function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'F2') {
+        event.preventDefault()
+        event.stopPropagation()
+
+        if (isReadOnly) {
+          return
+        }
+
+        // Remove focus from Bill No / Name / Mobile / any other input
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur()
+        }
+
+        const lastIndex = lines.length - 1
+
+        setSelectedIndex(lastIndex)
+        setActiveField('product')
+        setBarcodeInput('')
+        setBarcodeNotFound(false)
+        setEditingTemporaryProductName(false)
+
+        return
+      }
+
       if (isReadOnly) {
         if (event.key === 'ArrowDown') {
           event.preventDefault()
@@ -589,6 +655,12 @@ function Billing({
         }
       }
 
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        setEditingBillNumber(true)
+        return
+      }
+
       if (event.key === 'ArrowDown') {
         event.preventDefault()
 
@@ -604,22 +676,6 @@ function Billing({
         setSelectedIndex((current) => Math.max(current - 1, 0))
 
         setActiveField('product')
-        return
-      }
-
-      if (event.key === 'F2') {
-        event.preventDefault()
-
-        if (isReadOnly) {
-          return
-        }
-
-        const lastIndex = lines.length - 1
-
-        setSelectedIndex(lastIndex)
-        setActiveField('product')
-        setBarcodeInput('')
-        setBarcodeNotFound(false)
         return
       }
 
@@ -730,7 +786,26 @@ function Billing({
         (selectedLine.productId !== null || selectedLine.isTemporary)
       ) {
         event.preventDefault()
-        setActiveField('quantity')
+
+        if (selectedLine.isTemporary) {
+          /*
+           * General Item name can only be edited once.
+           * When revisiting the row, Enter goes directly to MRP.
+           */
+          setEditingTemporaryProductName(false)
+          setMrpInput(selectedLine.mrpPaise === 0 ? '' : (selectedLine.mrpPaise / 100).toString())
+          setActiveField('mrp')
+        } else {
+          setActiveField('quantity')
+        }
+
+        return
+      }
+
+      if (event.key === 'Enter' && activeField === 'mrp' && selectedLine?.isTemporary) {
+        event.preventDefault()
+        commitMrp()
+        return
       }
     }
 
@@ -941,7 +1016,7 @@ function Billing({
       productName: 'General Item',
       isTemporary: true,
       barcode,
-      quantityPrecision: 0,
+      quantityPrecision: 3,
       mrpPaise: 0,
       quantity: 1,
       freeQuantity: 0,
@@ -970,7 +1045,9 @@ function Billing({
      * rather than the new blank row.
      */
     setSelectedIndex(bottomIndex)
-    setActiveField('quantity')
+    setEditingTemporaryProductName(true)
+    setActiveField('product')
+    setMrpInput('')
     setRateInput('')
   }
 
@@ -1066,6 +1143,120 @@ function Billing({
     } finally {
       setIsLoadingBatches(false)
     }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * Temporary General Item - Product Name
+   * ---------------------------------------------------------
+   */
+
+  function handleTemporaryProductNameChange(value: string): void {
+    if (isReadOnly) {
+      return
+    }
+
+    updateCurrentSession((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((currentLine, index) =>
+        index === selectedIndex && currentLine.isTemporary
+          ? {
+              ...currentLine,
+              productName: value
+            }
+          : currentLine
+      )
+    }))
+
+    setQuantityShortcutError('')
+  }
+
+  function handleTemporaryProductNameEnter(): void {
+    const line = lines[selectedIndex]
+
+    if (!line?.isTemporary) {
+      return
+    }
+
+    const productName = line.productName.trim()
+
+    if (!productName) {
+      setQuantityShortcutError('Enter product name before moving to MRP.')
+
+      temporaryProductNameInputRef.current?.focus()
+      return
+    }
+
+    /*
+     * Product name has now been entered.
+     * It cannot be edited again during this billing row flow.
+     */
+    setEditingTemporaryProductName(false)
+
+    setQuantityShortcutError('')
+
+    setMrpInput(line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString())
+
+    setActiveField('mrp')
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * Temporary General Item - MRP
+   * ---------------------------------------------------------
+   */
+
+  function handleMrpChange(value: string): void {
+    if (!/^\d*(\.\d{0,2})?$/.test(value)) {
+      return
+    }
+
+    setMrpInput(value)
+    setQuantityShortcutError('')
+  }
+
+  function commitMrp(): void {
+    const line = lines[selectedIndex]
+
+    if (!line?.isTemporary) {
+      return
+    }
+
+    if (mrpInput === '') {
+      setQuantityShortcutError('Enter MRP before moving to quantity.')
+
+      mrpInputRef.current?.focus()
+
+      return
+    }
+
+    const mrp = Number(mrpInput)
+
+    if (!Number.isFinite(mrp) || mrp <= 0) {
+      setQuantityShortcutError('MRP must be greater than zero.')
+
+      mrpInputRef.current?.focus()
+      mrpInputRef.current?.select()
+
+      return
+    }
+
+    const mrpPaise = Math.round(mrp * 100)
+
+    updateCurrentSession((currentSession) => ({
+      ...currentSession,
+      lines: currentSession.lines.map((currentLine, index) =>
+        index === selectedIndex && currentLine.isTemporary
+          ? {
+              ...currentLine,
+              mrpPaise
+            }
+          : currentLine
+      )
+    }))
+
+    setQuantityShortcutError('')
+    setActiveField('quantity')
   }
 
   /*
@@ -1243,6 +1434,36 @@ function Billing({
   }
 
   function commitRate(): void {
+    const line = lines[selectedIndex]
+
+    if (!line) {
+      return
+    }
+
+    /*
+     * General Item rate is mandatory.
+     */
+    if (line.isTemporary) {
+      if (rateInput === '') {
+        setQuantityShortcutError('Enter rate before moving to the next row.')
+
+        rateInputRef.current?.focus()
+
+        return
+      }
+
+      const temporaryRate = Number(rateInput)
+
+      if (!Number.isFinite(temporaryRate) || temporaryRate <= 0) {
+        setQuantityShortcutError('Rate must be greater than zero.')
+
+        rateInputRef.current?.focus()
+        rateInputRef.current?.select()
+
+        return
+      }
+    }
+
     const rate = rateInput === '' ? 0 : Number(rateInput)
 
     if (!Number.isFinite(rate) || rate < 0) {
@@ -1264,6 +1485,7 @@ function Billing({
       )
     }))
 
+    setQuantityShortcutError('')
     handleRateEnter()
   }
 
@@ -1276,6 +1498,7 @@ function Billing({
      */
     setSelectedIndex((current) => Math.min(current + 1, lines.length - 1))
 
+    setEditingTemporaryProductName(false)
     setActiveField('product')
     setBarcodeInput('')
     setRateInput('')
@@ -1490,7 +1713,29 @@ function Billing({
           <div className="billing-header-column">
             <div className="billing-field">
               <label>Bill No. :</label>
-              <strong>{displaySession.billNumber}</strong>
+
+              {editingBillNumber ? (
+                <input
+                  ref={billNumberInputRef}
+                  value={displaySession.billNumber}
+                  onChange={(event) => {
+                    updateCurrentSession((currentSession) => ({
+                      ...currentSession,
+                      billNumber: event.target.value
+                    }))
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === 'Escape') {
+                      event.preventDefault()
+                      setEditingBillNumber(false)
+                      setActiveField('product')
+                    }
+                  }}
+                  autoComplete="off"
+                />
+              ) : (
+                <strong>{displaySession.billNumber}</strong>
+              )}
             </div>
 
             <div className="billing-field">
@@ -1593,6 +1838,30 @@ function Billing({
                               spellCheck={false}
                             />
                           </div>
+                        ) : line.isTemporary && selected && editingTemporaryProductName ? (
+                          <div className="product-entry">
+                            <input
+                              ref={temporaryProductNameInputRef}
+                              type="text"
+                              value={line.productName}
+                              onChange={(event) =>
+                                handleTemporaryProductNameChange(event.target.value)
+                              }
+                              onFocus={() => setActiveField('product')}
+                              onKeyDown={(event) => {
+                                if (event.key !== 'Enter') {
+                                  return
+                                }
+
+                                event.preventDefault()
+                                event.stopPropagation()
+
+                                handleTemporaryProductNameEnter()
+                              }}
+                              autoComplete="off"
+                              spellCheck={false}
+                            />
+                          </div>
                         ) : (
                           <span className={line.isTemporary ? 'temporary-general-item' : ''}>
                             {line.productName}
@@ -1601,7 +1870,33 @@ function Billing({
                       </td>
 
                       <td className="number-cell">
-                        {line.mrpPaise > 0 ? formatRupees(line.mrpPaise) : ''}
+                        {line.isTemporary && selected && activeField === 'mrp' ? (
+                          <input
+                            ref={mrpInputRef}
+                            className="billing-number-input"
+                            type="text"
+                            inputMode="decimal"
+                            value={mrpInput}
+                            onFocus={() => {
+                              setMrpInput(
+                                line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString()
+                              )
+                            }}
+                            onChange={(event) => handleMrpChange(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                event.stopPropagation()
+
+                                commitMrp()
+                              }
+                            }}
+                          />
+                        ) : line.mrpPaise > 0 ? (
+                          formatRupees(line.mrpPaise)
+                        ) : (
+                          ''
+                        )}
                       </td>
 
                       <td className="number-cell">
@@ -1782,11 +2077,13 @@ function Billing({
         ) : (
           <div className="billing-footer">
             <span>F1 Back</span>
+            <span>F2 Add Item</span>
             <span>Enter Item Master</span>
             <span>Delete Remove</span>
             <span>F6 Payment</span>
             <span>F9 Bill History</span>
             <span>Ctrl+N New Bill</span>
+            <span>← Edit Bill No.</span>
           </div>
         )}
 
