@@ -158,7 +158,6 @@ function Billing({
   const [, setIsLoadingBatches] = useState(false)
 
   const [pendingPayment, setPendingPayment] = useState<PaymentResult | null>(null)
-  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false)
   const [isCompletingSale, setIsCompletingSale] = useState(false)
   const [showPrintConfirmation, setShowPrintConfirmation] = useState(false)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
@@ -527,7 +526,6 @@ function Billing({
     if (
       showItemSelector ||
       showPayment ||
-      showCompleteConfirmation ||
       showPrintConfirmation ||
       showErrorDialog ||
       showHistoricalPayment ||
@@ -557,15 +555,6 @@ function Billing({
       }
 
       return null
-    }
-
-    function isEmptyBillingScreen(): boolean {
-      return (
-        !isHistoricalBill &&
-        lines.length === 1 &&
-        lines[0].productId === null &&
-        !lines[0].isTemporary
-      )
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
@@ -1612,6 +1601,39 @@ function Billing({
     setShowHistoricalRefundConfirmation(true)
   }
 
+  async function completeSale(payment: PaymentResult): Promise<void> {
+    if (isCompletingSale) return
+
+    setIsCompletingSale(true)
+
+    try {
+      const result = await window.kirana.billing.completeSale({
+        billNumber: displaySession.billNumber,
+        customerName: displaySession.customerName,
+        customerMobile: displaySession.customerMobile,
+        lines: lines.filter((line) => line.productId !== null || line.isTemporary),
+        payment
+      })
+
+      console.log('Sale completed:', result)
+
+      setIsCompletingSale(false)
+
+      // Sale is completed successfully.
+      // Now show only the Print Bill confirmation.
+      setShowPrintConfirmation(true)
+    } catch (error) {
+      console.error('Failed to complete sale:', error)
+
+      const message = error instanceof Error ? error.message : 'Failed to complete bill.'
+
+      setIsCompletingSale(false)
+      setPendingPayment(null)
+      setShowErrorDialog(true)
+      setErrorDialogMessage(message)
+    }
+  }
+
   if (isHistoricalBill && historicalLoading) {
     return (
       <div className="billing-screen">
@@ -2113,8 +2135,9 @@ function Billing({
           }}
           onComplete={(payment: PaymentResult) => {
             setPendingPayment(payment)
-            setShowCompleteConfirmation(true)
             setShowPayment(false)
+
+            void completeSale(payment)
           }}
         />
       )}
@@ -2142,57 +2165,6 @@ function Billing({
               method: payment.mode === 'upi' ? 'upi' : 'cash',
               amountPaise: payment.paidPaise
             })
-          }}
-        />
-      )}
-
-      {!isHistoricalBill && showCompleteConfirmation && pendingPayment && (
-        <ConfirmDialog
-          title="Complete Bill"
-          message={`Complete bill ${displaySession.billNumber}?`}
-          onConfirm={async () => {
-            if (isCompletingSale) {
-              return
-            }
-
-            if (!pendingPayment) {
-              return
-            }
-
-            setIsCompletingSale(true)
-
-            try {
-              const result = await window.kirana.billing.completeSale({
-                billNumber: displaySession.billNumber,
-                customerName: displaySession.customerName,
-                customerMobile: displaySession.customerMobile,
-
-                lines: lines.filter((line) => line.productId !== null || line.isTemporary),
-
-                payment: pendingPayment
-              })
-
-              console.log('Sale completed:', result)
-
-              setShowCompleteConfirmation(false)
-              setShowPayment(false)
-              setIsCompletingSale(false)
-              setShowPrintConfirmation(true)
-            } catch (error) {
-              console.error('Failed to complete sale:', error)
-
-              const message = error instanceof Error ? error.message : 'Failed to complete bill.'
-
-              setShowCompleteConfirmation(false)
-              setIsCompletingSale(false)
-              setPendingPayment(null)
-              setShowErrorDialog(true)
-              setErrorDialogMessage(message)
-            }
-          }}
-          onCancel={() => {
-            setShowCompleteConfirmation(false)
-            setPendingPayment(null)
           }}
         />
       )}

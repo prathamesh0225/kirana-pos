@@ -491,15 +491,14 @@ function ProductForm({
       if (isEdit && productId !== undefined) {
         await window.kirana.products.update(productId, data)
       } else {
-        await window.kirana.products.create({
+        const createdProduct = await window.kirana.products.create({
           ...data,
           stockQuantity: Number(form.stockQuantity || '0')
         })
+
+        sessionStorage.setItem('item-master-return-product-id', String(createdProduct.id))
       }
 
-      /*
-       * Save succeeded.
-       */
       setDialog(null)
       onSaved()
     } catch (err) {

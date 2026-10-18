@@ -1,12 +1,18 @@
-//ItemMaster.tsx
-import { useEffect, useRef, useState } from 'react'
+// ItemMaster.tsx
+
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
 import './item-master.css'
+
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
+
 import DateFilterDialog, {
   type DateRange
 } from '../../components/date-filter-dialog/DateFilterDialog'
+
 import StockAdjustment from './StockAdjustment'
 import StockHistory from './StockHistory'
+
 import BarcodePrintDialog from '../../components/barcode-print-dialog/BarcodePrintDialog'
 
 type ItemMasterProps = {
@@ -31,6 +37,13 @@ function getToday(): string {
   return `${year}-${month}-${day}`
 }
 
+/*
+ * Product ID to restore after returning from
+ * Edit / Stock Adjustment / Stock History /
+ * Enable-Disable / Barcode Print.
+ */
+const ITEM_MASTER_RETURN_PRODUCT_KEY = 'item-master-return-product-id'
+
 function ItemMaster({
   mode = 'manage',
   onBack,
@@ -43,8 +56,11 @@ function ItemMaster({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
   const [statusChangeProduct, setStatusChangeProduct] = useState<ProductRecord | null>(null)
+
   const [statusChanging, setStatusChanging] = useState(false)
+
   const [statusFilter, setStatusFilter] = useState<'active' | 'disabled' | 'all'>('active')
 
   const [stockAdjustmentProduct, setStockAdjustmentProduct] = useState<ProductRecord | null>(null)
@@ -59,12 +75,47 @@ function ItemMaster({
   })
 
   // const [allProducts, setAllProducts] = useState<ProductRecord[]>([])
+
   const [searchError, setSearchError] = useState('')
 
   const [barcodePrintProduct, setBarcodePrintProduct] = useState<ProductRecord | null>(null)
 
   const searchRef = useRef<HTMLInputElement>(null)
+
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+
+  const restoreScrollOnReturnRef = useRef(false)
+  /*
+   * Remember the product before opening another
+   * Item Master operation.
+   */
+  function rememberSelectedProduct(productId: number): void {
+    sessionStorage.setItem(ITEM_MASTER_RETURN_PRODUCT_KEY, String(productId))
+  }
+
+  /*
+   * Get the product that should be selected after
+   * returning to Item Master.
+   */
+  function getRememberedProductId(): number | null {
+    const value = sessionStorage.getItem(ITEM_MASTER_RETURN_PRODUCT_KEY)
+
+    if (!value) {
+      return null
+    }
+
+    const productId = Number(value)
+
+    return Number.isFinite(productId) ? productId : null
+  }
+
+  /*
+   * Clear the remembered product after it has
+   * been restored.
+   */
+  function clearRememberedProduct(): void {
+    sessionStorage.removeItem(ITEM_MASTER_RETURN_PRODUCT_KEY)
+  }
 
   async function loadProducts(): Promise<void> {
     try {
@@ -74,7 +125,6 @@ function ItemMaster({
       const result = await window.kirana.products.list(10000, statusFilter)
 
       setProducts(result)
-      setSelectedIndex(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to load products'
 
@@ -88,18 +138,63 @@ function ItemMaster({
     void loadProducts()
   }, [statusFilter])
 
+  /*
+   * Restore the exact product after returning from
+   * Edit / Stock Adjustment / History / etc.
+   *
+   * We use product ID instead of row index because
+   * the product's position can change after reload.
+   */
+  useEffect(() => {
+    if (loading || products.length === 0) {
+      return
+    }
+
+    const rememberedProductId = getRememberedProductId()
+
+    if (rememberedProductId === null) {
+      return
+    }
+
+    const rememberedIndex = products.findIndex((product) => product.id === rememberedProductId)
+
+    if (rememberedIndex !== -1) {
+      setSelectedIndex(rememberedIndex)
+    }
+
+    clearRememberedProduct()
+  }, [products, loading])
+
+  /*
+   * Existing search behavior.
+   */
   useEffect(() => {
     if (!searchTerm.trim()) {
       setSearchError('')
       setSelectedIndex(0)
     }
   }, [searchTerm])
+
+  /*
+   * Focus search box when Item Master opens.
+   */
   useEffect(() => {
     searchRef.current?.focus()
   }, [])
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
+  /*
+   * Keep the selected row visible and centered.
+   *
+   * useLayoutEffect is intentional here because the
+   * row must already exist in the DOM after products
+   * reload before we calculate its position.
+   */
+  useLayoutEffect(() => {
+    if (loading || products.length === 0) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
       const row = selectedRowRef.current
 
       if (!row) {
@@ -119,20 +214,33 @@ function ItemMaster({
       }
 
       const headerHeight = header.getBoundingClientRect().height
+
       const rowRect = row.getBoundingClientRect()
+
       const containerRect = container.getBoundingClientRect()
 
-      // Visible table area starts below the sticky header.
+      /*
+       * Visible table area starts below the sticky header.
+       */
       const visibleTop = containerRect.top + headerHeight
+
       const visibleBottom = containerRect.bottom
 
-      // Center the selected row inside the visible table area.
+      /*
+       * Center the selected row inside the visible
+       * table area.
+       */
       const visibleCenter = (visibleTop + visibleBottom) / 2
+
       const rowCenter = (rowRect.top + rowRect.bottom) / 2
 
       container.scrollTop += rowCenter - visibleCenter
     })
-  }, [selectedIndex])
+
+    return (): void => {
+      cancelAnimationFrame(frame)
+    }
+  }, [selectedIndex, products, loading])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -151,7 +259,9 @@ function ItemMaster({
 
       if (event.key === 'F2') {
         event.preventDefault()
+
         onAddItem()
+
         return
       }
 
@@ -161,6 +271,8 @@ function ItemMaster({
         const selectedProduct = products[selectedIndex]
 
         if (selectedProduct) {
+          rememberSelectedProduct(selectedProduct.id)
+
           onEditItem(selectedProduct.id)
         }
 
@@ -177,6 +289,8 @@ function ItemMaster({
         const selectedProduct = products[selectedIndex]
 
         if (selectedProduct) {
+          rememberSelectedProduct(selectedProduct.id)
+          restoreScrollOnReturnRef.current = true
           setStockAdjustmentProduct(selectedProduct)
         }
 
@@ -196,7 +310,10 @@ function ItemMaster({
           return
         }
 
+        rememberSelectedProduct(selectedProduct.id)
+        restoreScrollOnReturnRef.current = true
         setStockHistoryProduct(selectedProduct)
+
         setStockHistoryDateFilterOpen(true)
 
         return
@@ -219,7 +336,9 @@ function ItemMaster({
 
         if (searchTerm) {
           setSearchTerm('')
+
           searchRef.current?.focus()
+
           return
         }
 
@@ -228,6 +347,7 @@ function ItemMaster({
          * so Escape means Item Master → Dashboard.
          */
         onBack()
+
         return
       }
 
@@ -259,6 +379,12 @@ function ItemMaster({
         const selectedProduct = products[selectedIndex]
 
         if (selectedProduct) {
+          /*
+           * Remember the product before opening the
+           * Enable / Disable confirmation.
+           */
+          rememberSelectedProduct(selectedProduct.id)
+
           setStatusChangeProduct(selectedProduct)
         }
 
@@ -268,7 +394,10 @@ function ItemMaster({
       if (event.key === 'Backspace') {
         event.preventDefault()
 
-        // Clear the entire search box with one Backspace press.
+        /*
+         * Clear the entire search box with one
+         * Backspace press.
+         */
         if (searchTerm) {
           setSearchTerm('')
           setSearchError('')
@@ -288,6 +417,8 @@ function ItemMaster({
         const selectedProduct = products[selectedIndex]
 
         if (selectedProduct) {
+          rememberSelectedProduct(selectedProduct.id)
+
           setBarcodePrintProduct(selectedProduct)
         }
 
@@ -311,8 +442,16 @@ function ItemMaster({
     selectedIndex,
     stockAdjustmentProduct,
     stockHistoryDateFilterOpen,
-    stockHistoryProduct
+    stockHistoryProduct,
+    barcodePrintProduct
   ])
+
+  function productMatchesSearch(product: ProductRecord, query: string): boolean {
+    const name = product.name.trim().toLowerCase()
+    const barcode = (product.barcode ?? '').trim().toLowerCase()
+
+    return name.startsWith(query) || barcode.startsWith(query)
+  }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const nextValue = event.target.value
@@ -329,15 +468,10 @@ function ItemMaster({
     }
 
     /*
-     * Check the complete product list before accepting
-     * the newly typed character.
+     * Find the FIRST matching product.
+     * This becomes the default selected product.
      */
-    const matchingIndex = products.findIndex((product) => {
-      const name = product.name.trim().toLowerCase()
-      const barcode = (product.barcode ?? '').trim().toLowerCase()
-
-      return name.startsWith(query) || barcode.startsWith(query)
-    })
+    const matchingIndex = products.findIndex((product) => productMatchesSearch(product, query))
 
     /*
      * Invalid next character:
@@ -350,7 +484,8 @@ function ItemMaster({
 
     /*
      * Valid search:
-     * accept the character and select the first match.
+     * accept the search text and select
+     * the FIRST matching product.
      */
     setSearchTerm(nextValue)
     setSearchError('')
@@ -366,6 +501,7 @@ function ItemMaster({
         product={stockAdjustmentProduct}
         onSaved={async (): Promise<void> => {
           setStockAdjustmentProduct(null)
+
           await loadProducts()
         }}
         onCancel={(): void => {
@@ -392,7 +528,10 @@ function ItemMaster({
         dateRange={stockHistoryDateRange}
         onBack={() => {
           setStockHistoryProduct(null)
-          requestAnimationFrame(() => searchRef.current?.focus())
+
+          requestAnimationFrame(() => {
+            searchRef.current?.focus()
+          })
         }}
       />
     )
@@ -418,17 +557,22 @@ function ItemMaster({
         </div>
       </div>
 
-
       <div className="item-master-table-wrap">
         <table className="item-master-table">
           <thead>
             <tr>
               <th className="select-column"></th>
+
               <th>Product</th>
+
               <th className="money-column">MRP</th>
+
               <th className="money-column">Rate</th>
+
               <th className="quantity-column">Stock</th>
+
               <th className="quantity-column">Low</th>
+
               <th>Status</th>
             </tr>
           </thead>
@@ -463,17 +607,21 @@ function ItemMaster({
               products.map((product, index) => {
                 const selected = index === selectedIndex
 
+                const searchMatches =
+                  searchTerm.trim() !== '' &&
+                  productMatchesSearch(product, searchTerm.trim().toLowerCase())
+
                 return (
                   <tr
                     key={product.id}
                     ref={selected ? selectedRowRef : null}
-                    className={selected ? 'selected-row' : ''}
+                    className={selected ? 'selected-row' : searchMatches ? 'search-match-row' : ''}
                     onClick={(): void => {
                       setSelectedIndex(index)
-
                       searchRef.current?.focus()
                     }}
                     onDoubleClick={(): void => {
+                      rememberSelectedProduct(product.id)
                       onEditItem(product.id)
                     }}
                   >
@@ -580,6 +728,14 @@ function ItemMaster({
               </div>
 
               <div className="item-master-detail">
+                <span className="item-master-detail-label">Purchasing Price</span>
+
+                <span className="item-master-detail-value">
+                  {formatRupees(selectedProduct.purchase_price_paise)}
+                </span>
+              </div>
+
+              <div className="item-master-detail">
                 <span className="item-master-detail-label">Stock</span>
 
                 <span className="item-master-detail-value">{selectedProduct.stock_quantity}</span>
@@ -638,6 +794,7 @@ function ItemMaster({
               }
 
               setStatusChangeProduct(null)
+
               await loadProducts()
             } catch (err) {
               const message = err instanceof Error ? err.message : 'Unable to change product status'
@@ -663,13 +820,16 @@ function ItemMaster({
         showPresets
         onApply={(range: DateRange): void => {
           setStockHistoryDateRange(range)
+
           setStockHistoryDateFilterOpen(false)
         }}
         onCancel={(): void => {
           setStockHistoryDateFilterOpen(false)
+
           setStockHistoryProduct(null)
         }}
       />
+
       <BarcodePrintDialog
         open={barcodePrintProduct !== null}
         product={barcodePrintProduct as ProductRecord}

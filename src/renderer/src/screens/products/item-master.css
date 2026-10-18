@@ -475,3 +475,28 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* =========================================================
+   SEARCH MATCH HIGHLIGHT
+   ========================================================= */
+
+.item-master-table tbody tr.search-match-row > td {
+  background: #9bb6ca !important;
+  color: #172b3b;
+}
+
+.item-master-table tbody tr.search-match-row:hover > td {
+  background: #8faec5 !important;
+}
+
+/* Selected row remains stronger than search highlight */
+
+.item-master-table tbody tr.selected-row > td {
+  background: #172f47 !important;
+  color: #ffffff;
+}
+
+.item-master-table tbody tr.selected-row:hover > td {
+  background: #172f47 !important;
+  color: #ffffff;
+}
