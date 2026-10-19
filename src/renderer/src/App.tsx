@@ -125,6 +125,8 @@ function App(): React.JSX.Element {
 
   const [purchaseSupplier, setPurchaseSupplier] = useState<Supplier | null>(null)
 
+  const [quickBillingOpen, setQuickBillingOpen] = useState(false)
+
   async function handleQuitApplication(): Promise<void> {
     if (quitBackupStatus !== null) {
       return
@@ -682,25 +684,94 @@ function App(): React.JSX.Element {
 
   if (screen.type === 'purchase-entry') {
     return (
-      <PurchaseEntry
-        supplier={purchaseSupplier}
-        purchaseId={screen.purchaseId}
-        onSupplierSelected={(supplier) => {
-          setPurchaseSupplier(supplier)
-        }}
-        onOpenHistory={() => {
-          setScreen({
-            type: 'purchase-history'
-          })
-        }}
-        onBack={() => {
-          setPurchaseSupplier(null)
+      <>
+        <div
+          style={{
+            display: quickBillingOpen ? 'none' : 'block',
+            width: '100%',
+            height: '100%',
+            pointerEvents: quickBillingOpen ? 'none' : 'auto'
+          }}
+        >
+          <PurchaseEntry
+            supplier={purchaseSupplier}
+            purchaseId={screen.purchaseId}
+            isActive={!quickBillingOpen}
+            onSupplierSelected={(supplier) => {
+              setPurchaseSupplier(supplier)
+            }}
+            onOpenHistory={() => {
+              setScreen({
+                type: 'purchase-history'
+              })
+            }}
+            onOpenBilling={() => {
+              setQuickBillingOpen(true)
+            }}
+            onBack={() => {
+              setQuickBillingOpen(false)
+              setPurchaseSupplier(null)
 
-          setScreen({
-            type: 'dashboard'
-          })
-        }}
-      />
+              setScreen({
+                type: 'dashboard'
+              })
+            }}
+          />
+        </div>
+
+        {quickBillingOpen && activeBillingSession && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1000,
+              width: '100%',
+              height: '100%',
+              background: '#ffffff'
+            }}
+          >
+            <Billing
+              session={activeBillingSession}
+              onSessionChange={updateActiveBillingSession}
+              mode="active"
+              onNewBill={handleNewBill}
+              onBillCompleted={async () => {
+                const newBillNumber =
+                  await window.kirana.billing.allocateNextBillNumber(activeBillingIndex)
+
+                setBillingSessions((currentSessions) => {
+                  if (!currentSessions) {
+                    return currentSessions
+                  }
+
+                  const updatedSessions: [BillingSession, BillingSession] = [...currentSessions]
+
+                  updatedSessions[activeBillingIndex] = createNewBillingSession(newBillNumber)
+
+                  return updatedSessions
+                })
+
+                setQuickBillingOpen(false)
+              }}
+              onBack={() => {
+                setQuickBillingOpen(false)
+              }}
+              onAddItem={() => {
+                // Keep Purchase Entry mounted.
+                // Quick Billing does not navigate away from this overlay.
+              }}
+              onEditItem={() => {
+                // Keep Purchase Entry mounted.
+                // Quick Billing does not navigate away from this overlay.
+              }}
+              onOpenBillHistory={() => {
+                // Do not leave the Quick Billing overlay.
+                // Existing normal Billing keeps its Bill History behavior.
+              }}
+            />
+          </div>
+        )}
+      </>
     )
   }
 

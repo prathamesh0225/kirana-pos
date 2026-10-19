@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
 import './supplier-master.css'
+import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
+
+// type Supplier = {
+//   id: number
+//   name: string
+//   mobile?: string | null
+//   gstin?: string | null
+//   address?: string | null
+//   openingBalancePaise: number
+//   balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
+//   isActive: boolean
+// }
 
 type SupplierMasterProps = {
   mode?: 'manage' | 'select'
@@ -10,6 +21,21 @@ type SupplierMasterProps = {
 
 function formatRupees(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`
+}
+
+/*
+ * Search behavior:
+ * - Matches from the beginning of supplier name
+ * - Also matches from the beginning of mobile / GSTIN
+ * - Keeps all suppliers visible
+ * - First matching supplier becomes selected
+ */
+function supplierMatchesSearch(supplier: Supplier, query: string): boolean {
+  const name = supplier.name.trim().toLowerCase()
+  const mobile = (supplier.mobile ?? '').trim().toLowerCase()
+  const gstin = (supplier.gstin ?? '').trim().toLowerCase()
+
+  return name.startsWith(query) || mobile.startsWith(query) || gstin.startsWith(query)
 }
 
 function SupplierMaster({
@@ -32,13 +58,29 @@ function SupplierMaster({
 
   const searchRef = useRef<HTMLInputElement>(null)
 
-  async function loadSuppliers(): Promise<void> {
+  /*
+   * Ref for the currently selected table row.
+   * When search changes, the first matching row becomes selected
+   * and this row is automatically scrolled into the center.
+   */
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+
+  async function loadSuppliers(preferredSupplierId?: number): Promise<Supplier[]> {
     try {
       setLoading(true)
       setError('')
 
       const allSuppliers = await window.kirana.supplier.list(true)
 
+      /*
+       * IMPORTANT:
+       * Do not filter suppliers by searchTerm here.
+       *
+       * This keeps all suppliers visible so that:
+       * - first search match can be selected
+       * - other similar matches can be highlighted
+       * - the list behaves like Item Master search
+       */
       const filtered = allSuppliers.filter((supplier) => {
         if (statusFilter === 'active' && !supplier.isActive) {
           return false
@@ -48,23 +90,41 @@ function SupplierMaster({
           return false
         }
 
-        if (!searchTerm.trim()) {
-          return true
-        }
-
-        const term = searchTerm.trim().toLowerCase()
-
-        return (
-          supplier.name.toLowerCase().includes(term) ||
-          (supplier.mobile ?? '').toLowerCase().includes(term) ||
-          (supplier.gstin ?? '').toLowerCase().includes(term)
-        )
+        return true
       })
 
       setSuppliers(filtered)
-      setSelectedIndex(0)
+
+      /*
+       * Keep the existing "newly added supplier becomes selected"
+       * behavior working exactly as before.
+       *
+       * If a preferred supplier ID is supplied, it gets priority.
+       * Otherwise, when searching, select the first search match.
+       */
+      if (preferredSupplierId !== undefined) {
+        const preferredIndex = filtered.findIndex((supplier) => supplier.id === preferredSupplierId)
+
+        setSelectedIndex(preferredIndex !== -1 ? preferredIndex : 0)
+      } else {
+        const query = searchTerm.trim().toLowerCase()
+
+        if (query) {
+          const matchingIndex = filtered.findIndex((supplier) =>
+            supplierMatchesSearch(supplier, query)
+          )
+
+          setSelectedIndex(matchingIndex !== -1 ? matchingIndex : 0)
+        } else {
+          setSelectedIndex(0)
+        }
+      }
+
+      return filtered
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load suppliers')
+
+      return []
     } finally {
       setLoading(false)
     }
@@ -73,6 +133,21 @@ function SupplierMaster({
   useEffect(() => {
     void loadSuppliers()
   }, [searchTerm, statusFilter])
+
+  /*
+   * Automatically scroll the selected supplier into the
+   * center of the visible list.
+   */
+  useEffect(() => {
+    if (!selectedRowRef.current) {
+      return
+    }
+
+    selectedRowRef.current.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth'
+    })
+  }, [selectedIndex])
 
   useEffect(() => {
     searchRef.current?.focus()
@@ -100,13 +175,11 @@ function SupplierMaster({
         event.preventDefault()
 
         if (mode === 'select') {
-          // F2 is handled by opening the existing supplier form.
           setShowForm(true)
           setEditingSupplier(null)
           return
         }
 
-        // existing F2 logic
         setShowForm(true)
         setEditingSupplier(null)
         return
@@ -183,10 +256,16 @@ function SupplierMaster({
     return (
       <SupplierForm
         supplier={editingSupplier}
-        onSaved={async (): Promise<void> => {
+        onSaved={async (createdSupplierId?: number): Promise<void> => {
           setShowForm(false)
           setEditingSupplier(null)
-          await loadSuppliers()
+
+          /*
+           * Existing working behavior:
+           * newly created supplier is passed back as preferred ID
+           * so it becomes selected after returning to the list.
+           */
+          await loadSuppliers(createdSupplierId)
 
           requestAnimationFrame(() => {
             searchRef.current?.focus()
@@ -293,10 +372,23 @@ function SupplierMaster({
               suppliers.map((supplier, index) => {
                 const selected = index === selectedIndex
 
+                /*
+                 * Highlight every supplier that matches
+                 * the search from the beginning.
+                 *
+                 * The selected row gets selected-row styling,
+                 * so it remains visually stronger than the
+                 * other matching rows.
+                 */
+                const searchMatches =
+                  searchTerm.trim() !== '' &&
+                  supplierMatchesSearch(supplier, searchTerm.trim().toLowerCase())
+
                 return (
                   <tr
                     key={supplier.id}
-                    className={selected ? 'selected-row' : ''}
+                    ref={selected ? selectedRowRef : null}
+                    className={selected ? 'selected-row' : searchMatches ? 'search-match-row' : ''}
                     onClick={(): void => {
                       setSelectedIndex(index)
                       searchRef.current?.focus()
@@ -453,18 +545,23 @@ function SupplierMaster({
 
 type SupplierFormProps = {
   supplier: Supplier | null
-  onSaved: () => Promise<void>
+  onSaved: (createdSupplierId?: number) => Promise<void>
   onCancel: () => void
 }
 
 function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React.JSX.Element {
   const [name, setName] = useState(supplier?.name ?? '')
+
   const [mobile, setMobile] = useState(supplier?.mobile ?? '')
+
   const [gstin, setGstin] = useState(supplier?.gstin ?? '')
+
   const [address, setAddress] = useState(supplier?.address ?? '')
+
   const [openingBalance, setOpeningBalance] = useState(
     supplier ? (supplier.openingBalancePaise / 100).toFixed(2) : '0.00'
   )
+
   const [balanceType, setBalanceType] = useState<'NONE' | 'PAYABLE' | 'RECEIVABLE'>(
     supplier?.balanceType ?? 'NONE'
   )
@@ -473,10 +570,15 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
   const [error, setError] = useState('')
 
   const nameRef = useRef<HTMLInputElement>(null)
+
   const mobileRef = useRef<HTMLInputElement>(null)
+
   const gstinRef = useRef<HTMLInputElement>(null)
+
   const addressRef = useRef<HTMLInputElement>(null)
+
   const balanceRef = useRef<HTMLInputElement>(null)
+
   const balanceTypeRef = useRef<HTMLSelectElement>(null)
 
   useEffect(() => {
@@ -513,11 +615,18 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
       if (supplier) {
         await window.kirana.supplier.update(supplier.id, data)
-      } else {
-        await window.kirana.supplier.create(data)
-      }
 
-      await onSaved()
+        await onSaved()
+      } else {
+        /*
+         * Existing working behavior:
+         * return the newly-created supplier ID
+         * so Supplier Master can select it.
+         */
+        const createdSupplier = await window.kirana.supplier.create(data)
+
+        await onSaved(createdSupplier.id)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save supplier')
     } finally {
@@ -581,6 +690,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
         <div className="supplier-form-body">
           <div className="supplier-form-row">
             <label>Name:</label>
+
             <input
               ref={nameRef}
               value={name}
@@ -591,6 +701,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
           <div className="supplier-form-row">
             <label>Mobile:</label>
+
             <input
               ref={mobileRef}
               value={mobile}
@@ -601,6 +712,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
           <div className="supplier-form-row">
             <label>GSTIN:</label>
+
             <input
               ref={gstinRef}
               value={gstin}
@@ -611,6 +723,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
           <div className="supplier-form-row">
             <label>Address:</label>
+
             <input
               ref={addressRef}
               value={address}
@@ -621,6 +734,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
           <div className="supplier-form-row">
             <label>Opening Balance:</label>
+
             <input
               ref={balanceRef}
               value={openingBalance}
@@ -631,6 +745,7 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
 
           <div className="supplier-form-row">
             <label>Balance Type:</label>
+
             <select
               ref={balanceTypeRef}
               value={balanceType}
@@ -640,7 +755,9 @@ function SupplierForm({ supplier, onSaved, onCancel }: SupplierFormProps): React
               disabled={saving}
             >
               <option value="NONE">NONE</option>
+
               <option value="PAYABLE">PAYABLE</option>
+
               <option value="RECEIVABLE">RECEIVABLE</option>
             </select>
           </div>

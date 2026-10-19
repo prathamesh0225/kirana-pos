@@ -409,3 +409,27 @@
   font-size: 18px;
   white-space: nowrap;
 }
+
+/* =========================================================
+   SUPPLIER SEARCH MATCH HIGHLIGHT
+   ========================================================= */
+
+.supplier-master-table tbody tr.search-match-row > td {
+  background: #9bb6ca !important;
+  color: #172b3b;
+}
+
+.supplier-master-table tbody tr.search-match-row:hover > td {
+  background: #8faec5 !important;
+}
+
+/* Selected supplier always gets priority over search highlight */
+.supplier-master-table tbody tr.selected-row > td {
+  background: #172f47 !important;
+  color: #ffffff;
+}
+
+.supplier-master-table tbody tr.selected-row:hover > td {
+  background: #172f47 !important;
+  color: #ffffff;
+}

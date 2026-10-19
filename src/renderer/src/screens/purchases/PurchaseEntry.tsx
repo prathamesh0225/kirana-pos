@@ -12,6 +12,8 @@ type PurchaseEntryProps = {
   onSupplierSelected: (supplier: Supplier) => void
   onBack: () => void
   onOpenHistory: () => void
+  onOpenBilling: () => void
+  isActive?: boolean
 }
 
 type PurchaseField =
@@ -185,7 +187,9 @@ export default function PurchaseEntry({
   purchaseId,
   onSupplierSelected,
   onBack,
-  onOpenHistory
+  onOpenHistory,
+  onOpenBilling,
+  isActive = true
 }: PurchaseEntryProps): React.JSX.Element {
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(todayIso)
@@ -332,6 +336,10 @@ export default function PurchaseEntry({
    */
 
   useEffect(() => {
+    if (!isActive) {
+      return
+    }
+
     const frame = requestAnimationFrame(() => {
       supplierRef.current?.focus()
     })
@@ -346,6 +354,10 @@ export default function PurchaseEntry({
    */
 
   useEffect(() => {
+    if (!isActive) {
+      return
+    }
+
     if (showItemSelector || showSupplierSelector || showPayment) {
       return
     }
@@ -1089,6 +1101,10 @@ export default function PurchaseEntry({
    */
 
   useEffect(() => {
+    if (!isActive) {
+      return
+    }
+
     if (showItemSelector || showSupplierSelector || showPayment) {
       return
     }
@@ -1168,6 +1184,14 @@ export default function PurchaseEntry({
 
         onOpenHistory()
 
+        return
+      }
+
+      if (event.key === 'F7') {
+        event.preventDefault()
+        event.stopPropagation()
+
+        onOpenBilling()
         return
       }
 
@@ -1317,7 +1341,9 @@ export default function PurchaseEntry({
     invoiceDate,
     invoiceDateInput,
     taxInput,
-    discountInput
+    discountInput,
+    isActive,
+    onOpenBilling
   ])
   /*
    * ---------------------------------------------------------
@@ -2225,6 +2251,7 @@ export default function PurchaseEntry({
           <span>F2 Add Item</span>
           <span>Enter Next</span>
           <span>F4 Supplier</span>
+          <span>F7 Quick Bill</span>
           <span>F9 History</span>
           <span>Delete Remove</span>
           <span>F6 Save</span>

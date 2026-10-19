@@ -147,7 +147,7 @@ declare global {
           purchasePricePaise: number
           stockQuantity?: number
           lowStockLevel?: number
-        }) => Promise<ProductRecord[]>
+        }) => Promise<ProductRecord>
 
         update: (
           productId: number,
