@@ -369,9 +369,22 @@ function Billing({
   }
 
   const subtotalPaise = useMemo(
-    () => lines.reduce((total, line) => total + line.amountPaise, 0),
+    () => lines.reduce((total, line) => total + Math.round(line.mrpPaise * line.quantity), 0),
     [lines]
   )
+
+  const discountPaise = useMemo(
+    () =>
+      lines.reduce(
+        (total, line) =>
+          total + Math.max(0, Math.round((line.mrpPaise - line.ratePaise) * line.quantity)),
+        0
+      ),
+    [lines]
+  )
+
+  const totalPaise = subtotalPaise - discountPaise
+
   // Bill History View, Modify Bill
   useEffect(() => {
     if (!isHistoricalBill || !saleId) {
@@ -558,6 +571,12 @@ function Billing({
     }
 
     function handleKeyDown(event: KeyboardEvent): void {
+      // Payment owns the keyboard while it is open.
+      // Do not allow Billing shortcuts to run underneath Payment.
+      if (showPayment) {
+        return
+      }
+
       if (event.key === 'F2') {
         event.preventDefault()
         event.stopPropagation()
@@ -815,7 +834,8 @@ function Billing({
     onOpenBillHistory,
     onSessionChange,
     selectedIndex,
-    showItemSelector
+    showItemSelector,
+    showPayment
   ])
 
   /*
@@ -2117,19 +2137,19 @@ function Billing({
 
           <div>
             <span>Discount</span>
-            <strong>₹0.00</strong>
+            <strong>₹{formatRupees(discountPaise)}</strong>
           </div>
 
           <div className="billing-total">
             <span>TOTAL</span>
-            <strong>₹{formatRupees(subtotalPaise)}</strong>
+            <strong>₹{formatRupees(totalPaise)}</strong>
           </div>
         </div>
       </div>
       {!isHistoricalBill && showPayment && (
         <Payment
           session={session}
-          totalPaise={subtotalPaise}
+          totalPaise={totalPaise}
           onBack={() => {
             setShowPayment(false)
           }}

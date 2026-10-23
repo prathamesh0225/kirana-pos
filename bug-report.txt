@@ -6,6 +6,11 @@ Bug 3 (Resolved) - (LOW) There should be limit to barcode printer i.e 10.
 Bug 4 - (HIGH) Fix the limit for sales list, purchase entry, etc.
 Bug 5 (Resolved) - (LOW) Barcode is case sensitive use numeric barcode (6-7 digits) when adding items.
 
+v2.3.0 - Release Added Features
+1. Quick Billing in Purchase Entry
+2. Better navigation in Item Master and Supplier master
+3. Auto Repair bill no if already exist in sales table.
+
 V3.0.0 - Implementations
 
 1. Display Low Stock in Dashboard and caution sign in item master

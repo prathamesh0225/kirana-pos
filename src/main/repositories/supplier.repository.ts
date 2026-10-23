@@ -9,6 +9,7 @@ export type Supplier = {
   openingBalancePaise: number
   balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
   isActive: boolean
+  totalBillAmountPaise: number
   createdAt: string
   updatedAt: string
 }
@@ -22,6 +23,7 @@ type SupplierRow = {
   opening_balance_paise: number
   balance_type: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
   is_active: number
+  total_bill_amount_paise: number
   created_at: string
   updated_at: string
 }
@@ -36,6 +38,7 @@ function mapSupplier(row: SupplierRow): Supplier {
     openingBalancePaise: row.opening_balance_paise,
     balanceType: row.balance_type,
     isActive: row.is_active === 1,
+    totalBillAmountPaise: row.total_bill_amount_paise,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -57,6 +60,14 @@ export function listSuppliers(includeInactive = false): Supplier[] {
             opening_balance_paise,
             balance_type,
             is_active,
+            COALESCE(
+              (
+                SELECT SUM(pi.total_amount_paise)
+                FROM purchase_invoices pi
+                WHERE pi.supplier_id = suppliers.id
+              ),
+              0
+            ) AS total_bill_amount_paise,
             created_at,
             updated_at
           FROM suppliers
@@ -76,6 +87,14 @@ export function listSuppliers(includeInactive = false): Supplier[] {
             opening_balance_paise,
             balance_type,
             is_active,
+            COALESCE(
+              (
+                SELECT SUM(pi.total_amount_paise)
+                FROM purchase_invoices pi
+                WHERE pi.supplier_id = suppliers.id
+              ),
+              0
+            ) AS total_bill_amount_paise,
             created_at,
             updated_at
           FROM suppliers
@@ -103,6 +122,14 @@ export function getSupplierById(id: number): Supplier | null {
         opening_balance_paise,
         balance_type,
         is_active,
+        COALESCE(
+          (
+            SELECT SUM(pi.total_amount_paise)
+            FROM purchase_invoices pi
+            WHERE pi.supplier_id = suppliers.id
+          ),
+          0
+        ) AS total_bill_amount_paise,
         created_at,
         updated_at
       FROM suppliers

@@ -337,6 +337,7 @@ function SupplierMaster({
               <th>Supplier</th>
               <th>Mobile</th>
               <th>GSTIN</th>
+              <th>Total Bill Amount</th>
               <th>Balance</th>
               <th>Status</th>
             </tr>
@@ -345,7 +346,7 @@ function SupplierMaster({
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="supplier-table-message">
+                <td colSpan={7} className="supplier-table-message">
                   Loading...
                 </td>
               </tr>
@@ -353,7 +354,7 @@ function SupplierMaster({
 
             {!loading && error && (
               <tr>
-                <td colSpan={6} className="supplier-table-message error">
+                <td colSpan={7} className="supplier-table-message error">
                   {error}
                 </td>
               </tr>
@@ -361,7 +362,7 @@ function SupplierMaster({
 
             {!loading && !error && suppliers.length === 0 && (
               <tr>
-                <td colSpan={6} className="supplier-table-message">
+                <td colSpan={7} className="supplier-table-message">
                   No suppliers found
                 </td>
               </tr>
@@ -406,6 +407,8 @@ function SupplierMaster({
 
                     <td>{supplier.gstin || '—'}</td>
 
+                    <td className="money-column">{formatRupees(supplier.totalBillAmountPaise)}</td>
+
                     <td className="money-column">{formatRupees(supplier.openingBalancePaise)}</td>
 
                     <td>{supplier.isActive ? 'Active' : 'Disabled'}</td>
@@ -443,6 +446,14 @@ function SupplierMaster({
 
                 <span className="supplier-master-detail-value">
                   {selectedSupplier.gstin || '—'}
+                </span>
+              </div>
+
+              <div className="supplier-master-detail">
+                <span className="supplier-master-detail-label">Total Bill Amount</span>
+
+                <span className="supplier-master-detail-value">
+                  {formatRupees(selectedSupplier.totalBillAmountPaise)}
                 </span>
               </div>
 

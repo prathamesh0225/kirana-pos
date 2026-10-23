@@ -82,6 +82,7 @@ declare global {
     openingBalancePaise: number
     balanceType: 'NONE' | 'PAYABLE' | 'RECEIVABLE'
     isActive: boolean
+    totalBillAmountPaise: number
     createdAt: string
     updatedAt: string
   }
