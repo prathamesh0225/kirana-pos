@@ -11,6 +11,7 @@ import { processSaleReturn, type ProcessSaleReturnInput } from '../services/retu
 import { listSales, getSaleById } from '../repositories/sale.repository'
 import { updateSale, type UpdateSaleInput } from '../services/sale-update.service'
 import { getAvailableBatchesForProduct } from '../repositories/purchase.repository'
+import { getBillingContextData } from '../repositories/billing-context.repository'
 
 export function registerBillingIpc(): void {
   ipcMain.handle('billing:getSlots', () => {
@@ -43,6 +44,10 @@ export function registerBillingIpc(): void {
 
   ipcMain.handle('billing:getDashboardSalesSummary', () => {
     return getDashboardSalesSummary()
+  })
+
+  ipcMain.handle('billing:getContextData', () => {
+    return getBillingContextData()
   })
 
   ipcMain.handle('billing:getSaleById', (_event, saleId: number) => {

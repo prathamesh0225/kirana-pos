@@ -7,6 +7,7 @@ import type { BillingLine, BillingSession, BillingMode } from './billing.types'
 import Payment, { type PaymentResult } from './Payment'
 import ErrorDialog from '../../components/error-dialog/ErrorDialog'
 import BatchSelector, { type BatchRecord } from './BatchSelector'
+import ContextPanel from '../../components/context-panel/ContextPanel'
 
 type BillingProps = {
   session: BillingSession
@@ -1637,6 +1638,10 @@ function Billing({
 
       console.log('Sale completed:', result)
 
+      // Refresh the Billing Context Panel immediately
+      // after the sale has been successfully saved.
+      window.dispatchEvent(new Event('kirana:sale-completed'))
+
       setIsCompletingSale(false)
 
       // Sale is completed successfully.
@@ -1746,498 +1751,511 @@ function Billing({
 
   return (
     <>
-      <div className="billing-screen">
-        <div className="billing-title-bar">
-          <div>{isHistoricalBill ? (isReadOnly ? 'VIEW BILL' : 'MODIFY BILL') : 'SALE ENTRY'}</div>
-        </div>
+      <div className="billing-layout">
+        <div className="billing-main">
+          <div className="billing-screen">
+            <div className="billing-title-bar">
+              <div>
+                {isHistoricalBill ? (isReadOnly ? 'VIEW BILL' : 'MODIFY BILL') : 'SALE ENTRY'}
+              </div>
+            </div>
 
-        <div className="billing-header">
-          <div className="billing-header-column">
-            <div className="billing-field">
-              <label>Bill No. :</label>
+            <div className="billing-header">
+              <div className="billing-header-column">
+                <div className="billing-field">
+                  <label>Bill No. :</label>
 
-              {editingBillNumber ? (
-                <input
-                  ref={billNumberInputRef}
-                  value={displaySession.billNumber}
-                  onChange={(event) => {
-                    updateCurrentSession((currentSession) => ({
-                      ...currentSession,
-                      billNumber: event.target.value
-                    }))
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === 'Escape') {
-                      event.preventDefault()
-                      setEditingBillNumber(false)
-                      setActiveField('product')
-                    }
-                  }}
-                  autoComplete="off"
-                />
-              ) : (
-                <strong>{displaySession.billNumber}</strong>
+                  {editingBillNumber ? (
+                    <input
+                      ref={billNumberInputRef}
+                      value={displaySession.billNumber}
+                      onChange={(event) => {
+                        updateCurrentSession((currentSession) => ({
+                          ...currentSession,
+                          billNumber: event.target.value
+                        }))
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === 'Escape') {
+                          event.preventDefault()
+                          setEditingBillNumber(false)
+                          setActiveField('product')
+                        }
+                      }}
+                      autoComplete="off"
+                    />
+                  ) : (
+                    <strong>{displaySession.billNumber}</strong>
+                  )}
+                </div>
+
+                <div className="billing-field">
+                  <label>Mobile :</label>
+
+                  <input
+                    value={customerMobile}
+                    onChange={(event) => handleCustomerMobileChange(event.target.value)}
+                    readOnly={isReadOnly}
+                  />
+                </div>
+              </div>
+
+              <div className="billing-header-column">
+                <div className="billing-field">
+                  <label>Date :</label>
+                  <strong>{new Date().toLocaleDateString('en-IN')}</strong>
+                </div>
+
+                <div className="billing-field">
+                  <label>Name :</label>
+
+                  <input
+                    value={customerName}
+                    onChange={(event) => handleCustomerNameChange(event.target.value)}
+                    readOnly={isReadOnly}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="billing-grid-wrapper">
+              <table className="billing-table">
+                <thead>
+                  <tr>
+                    <th className="product-column">PRODUCT</th>
+                    <th>MRP</th>
+                    <th>QTY</th>
+                    <th>FREE</th>
+                    <th>RATE</th>
+                    <th>AMOUNT</th>
+                  </tr>
+                </thead>
+              </table>
+
+              <div className="billing-items-scroll">
+                <table className="billing-table">
+                  <tbody>
+                    {lines.map((line, index) => {
+                      const selected = index === selectedIndex
+
+                      const isBottomBlank =
+                        !isReadOnly &&
+                        index === lines.length - 1 &&
+                        line.productId === null &&
+                        !line.isTemporary
+
+                      return (
+                        <tr
+                          key={line.id}
+                          ref={selected ? selectedRowRef : undefined}
+                          className={selected ? 'billing-row-selected' : ''}
+                          onClick={() => {
+                            setSelectedIndex(index)
+                            setActiveField('product')
+
+                            if (line.productId === null && !line.isTemporary) {
+                              setBarcodeInput('')
+                            }
+                          }}
+                        >
+                          <td className="product-column">
+                            {isBottomBlank && selected ? (
+                              <div className="product-entry">
+                                <input
+                                  ref={barcodeInputRef}
+                                  onFocus={() => setActiveField('product')}
+                                  value={barcodeInput}
+                                  onChange={(event) => handleBarcodeChange(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') {
+                                      return
+                                    }
+
+                                    event.preventDefault()
+                                    event.stopPropagation()
+
+                                    if (barcodeInput.trim()) {
+                                      if (handleQuickQuantity(barcodeInput)) {
+                                        return
+                                      }
+
+                                      void lookupBarcode()
+                                    } else {
+                                      openItemSelector()
+                                    }
+                                  }}
+                                  placeholder="Scan / search product"
+                                  autoComplete="off"
+                                  spellCheck={false}
+                                />
+                              </div>
+                            ) : line.isTemporary && selected && editingTemporaryProductName ? (
+                              <div className="product-entry">
+                                <input
+                                  ref={temporaryProductNameInputRef}
+                                  type="text"
+                                  value={line.productName}
+                                  onChange={(event) =>
+                                    handleTemporaryProductNameChange(event.target.value)
+                                  }
+                                  onFocus={() => setActiveField('product')}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') {
+                                      return
+                                    }
+
+                                    event.preventDefault()
+                                    event.stopPropagation()
+
+                                    handleTemporaryProductNameEnter()
+                                  }}
+                                  autoComplete="off"
+                                  spellCheck={false}
+                                />
+                              </div>
+                            ) : (
+                              <span className={line.isTemporary ? 'temporary-general-item' : ''}>
+                                {line.productName}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="number-cell">
+                            {line.isTemporary && selected && activeField === 'mrp' ? (
+                              <input
+                                ref={mrpInputRef}
+                                className="billing-number-input"
+                                type="text"
+                                inputMode="decimal"
+                                value={mrpInput}
+                                onFocus={() => {
+                                  setMrpInput(
+                                    line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString()
+                                  )
+                                }}
+                                onChange={(event) => handleMrpChange(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+
+                                    commitMrp()
+                                  }
+                                }}
+                              />
+                            ) : line.mrpPaise > 0 ? (
+                              formatRupees(line.mrpPaise)
+                            ) : (
+                              ''
+                            )}
+                          </td>
+
+                          <td className="number-cell">
+                            {line.productId !== null || line.isTemporary ? (
+                              selected && activeField === 'quantity' ? (
+                                <input
+                                  disabled={isReadOnly}
+                                  ref={quantityInputRef}
+                                  className="billing-number-input"
+                                  type="number"
+                                  min="0"
+                                  step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                                  value={line.quantity === 0 ? '' : line.quantity}
+                                  onChange={(event) => handleQuantityChange(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+                                      handleQuantityEnter()
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                line.quantity
+                              )
+                            ) : (
+                              ''
+                            )}
+                          </td>
+
+                          <td className="number-cell">
+                            {line.productId !== null || line.isTemporary ? (
+                              selected && activeField === 'free' ? (
+                                <input
+                                  disabled={isReadOnly}
+                                  ref={freeInputRef}
+                                  className="billing-number-input"
+                                  type="number"
+                                  min="0"
+                                  step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                                  value={line.freeQuantity === 0 ? '' : line.freeQuantity}
+                                  onChange={(event) => handleFreeChange(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+                                      handleFreeEnter()
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                line.freeQuantity
+                              )
+                            ) : (
+                              ''
+                            )}
+                          </td>
+
+                          <td className="number-cell">
+                            {line.productId !== null || line.isTemporary ? (
+                              selected && activeField === 'rate' ? (
+                                <input
+                                  disabled={isReadOnly}
+                                  ref={rateInputRef}
+                                  className="billing-number-input"
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={rateInput}
+                                  onFocus={() => {
+                                    /*
+                                     * Load current rate into the editing
+                                     * value and select it.
+                                     */
+                                    setRateInput(
+                                      line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
+                                    )
+                                  }}
+                                  onChange={(event) => handleRateChange(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+                                      commitRate()
+                                    }
+                                  }}
+                                />
+                              ) : line.ratePaise > 0 ? (
+                                formatRupees(line.ratePaise)
+                              ) : (
+                                ''
+                              )
+                            ) : (
+                              ''
+                            )}
+                          </td>
+
+                          <td className="number-cell amount-cell">
+                            {line.amountPaise > 0 ? formatRupees(line.amountPaise) : ''}
+                          </td>
+                        </tr>
+                      )
+                    })}
+
+                    {Array.from({
+                      length: Math.max(8, 12 - lines.length)
+                    }).map((_, index) => (
+                      <tr key={`empty-${index}`} className="empty-row">
+                        <td />
+                        <td />
+                        <td />
+                        <td />
+                        <td />
+                        <td />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {quantityShortcutError && (
+                <div className="billing-error">{quantityShortcutError}</div>
+              )}
+
+              {barcodeNotFound && (
+                <div className="billing-not-found">
+                  Product not found — General Item created for this bill
+                </div>
               )}
             </div>
 
-            <div className="billing-field">
-              <label>Mobile :</label>
+            {isReadOnly ? (
+              <div className="billing-footer historical-billing-footer">
+                <span>↑↓ Select Row</span>
 
-              <input
-                value={customerMobile}
-                onChange={(event) => handleCustomerMobileChange(event.target.value)}
-                readOnly={isReadOnly}
+                <button
+                  type="button"
+                  className={historicalActionIndex === 0 ? 'billing-action-selected' : ''}
+                  onClick={() => {
+                    setHistoricalActionIndex(0)
+                    handleHistoricalAction('modify')
+                  }}
+                >
+                  MODIFY
+                </button>
+
+                <button
+                  type="button"
+                  className={historicalActionIndex === 1 ? 'billing-action-selected' : ''}
+                  onClick={() => {
+                    setHistoricalActionIndex(1)
+                    handleHistoricalAction('print')
+                  }}
+                >
+                  PRINT
+                </button>
+
+                <button
+                  type="button"
+                  className={historicalActionIndex === 2 ? 'billing-action-selected' : ''}
+                  onClick={() => {
+                    setHistoricalActionIndex(2)
+                    handleHistoricalAction('delete')
+                  }}
+                >
+                  DELETE
+                </button>
+
+                <span>←→ Actions</span>
+                <span>F3 Modify</span>
+                <span>Enter Action</span>
+                <span>Esc Back</span>
+              </div>
+            ) : mode === 'modify' ? (
+              <div className="billing-footer">
+                <span>F2 Add Item</span>
+                <span>Enter Add</span>
+                <span>Delete Remove</span>
+                <span>F6 Save</span>
+                <span>Esc Back</span>
+              </div>
+            ) : (
+              <div className="billing-footer">
+                <span>F1 Back</span>
+                <span>F2 Add Item</span>
+                <span>Enter Item Master</span>
+                <span>Delete Remove</span>
+                <span>F6 Payment</span>
+                <span>F9 Bill History</span>
+                <span>Ctrl+N New Bill</span>
+                <span>← Edit Bill No.</span>
+              </div>
+            )}
+
+            <div className="billing-summary">
+              <div>
+                <span>Subtotal</span>
+                <strong>₹{formatRupees(subtotalPaise)}</strong>
+              </div>
+
+              <div>
+                <span>Discount</span>
+                <strong>₹{formatRupees(discountPaise)}</strong>
+              </div>
+
+              <div className="billing-total">
+                <span>TOTAL</span>
+                <strong>₹{formatRupees(totalPaise)}</strong>
+              </div>
+            </div>
+          </div>
+          {!isHistoricalBill && showPayment && (
+            <Payment
+              session={session}
+              totalPaise={totalPaise}
+              onBack={() => {
+                setShowPayment(false)
+              }}
+              onComplete={(payment: PaymentResult) => {
+                setPendingPayment(payment)
+                setShowPayment(false)
+
+                void completeSale(payment)
+              }}
+            />
+          )}
+
+          {isHistoricalBill && !isReadOnly && showHistoricalPayment && historicalSession && (
+            <Payment
+              session={historicalSession}
+              totalPaise={
+                historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+                historicalOriginalTotalPaise
+              }
+              onBack={() => {
+                setShowHistoricalPayment(false)
+                setPendingHistoricalPayment(null)
+              }}
+              onComplete={(payment: PaymentResult) => {
+                if (payment.mode === 'mixed') {
+                  setQuantityShortcutError('Mixed payment is not supported for bill modification')
+                  return
+                }
+                setPendingHistoricalPayment(payment)
+                setShowHistoricalPayment(false)
+                void saveHistoricalBill({
+                  type: 'charge',
+                  method: payment.mode === 'upi' ? 'upi' : 'cash',
+                  amountPaise: payment.paidPaise
+                })
+              }}
+            />
+          )}
+
+          {isHistoricalBill &&
+            !isReadOnly &&
+            showHistoricalRefundConfirmation &&
+            historicalSession && (
+              <ConfirmDialog
+                title="REFUND"
+                message={`Refund ₹${(
+                  Math.abs(
+                    historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+                      historicalOriginalTotalPaise
+                  ) / 100
+                ).toFixed(2)} to customer?`}
+                onConfirm={() => {
+                  setShowHistoricalRefundConfirmation(false)
+
+                  void saveHistoricalBill({
+                    type: 'refund',
+                    method: 'cash',
+                    amountPaise: Math.abs(
+                      historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
+                        historicalOriginalTotalPaise
+                    )
+                  })
+                }}
+                onCancel={() => {
+                  setShowHistoricalRefundConfirmation(false)
+                }}
               />
-            </div>
-          </div>
+            )}
 
-          <div className="billing-header-column">
-            <div className="billing-field">
-              <label>Date :</label>
-              <strong>{new Date().toLocaleDateString('en-IN')}</strong>
-            </div>
+          {!isHistoricalBill && showPrintConfirmation && (
+            <ConfirmDialog
+              title="Print Bill"
+              message={`Print bill ${displaySession.billNumber}?`}
+              onConfirm={() => printBill()}
+              onCancel={async () => {
+                setShowPrintConfirmation(false)
+                setPendingPayment(null)
+                await onBillCompleted(displaySession.billNumber)
+              }}
+            />
+          )}
 
-            <div className="billing-field">
-              <label>Name :</label>
-
-              <input
-                value={customerName}
-                onChange={(event) => handleCustomerNameChange(event.target.value)}
-                readOnly={isReadOnly}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="billing-grid-wrapper">
-          <table className="billing-table">
-            <thead>
-              <tr>
-                <th className="product-column">PRODUCT</th>
-                <th>MRP</th>
-                <th>QTY</th>
-                <th>FREE</th>
-                <th>RATE</th>
-                <th>AMOUNT</th>
-              </tr>
-            </thead>
-          </table>
-
-          <div className="billing-items-scroll">
-            <table className="billing-table">
-              <tbody>
-                {lines.map((line, index) => {
-                  const selected = index === selectedIndex
-
-                  const isBottomBlank =
-                    !isReadOnly &&
-                    index === lines.length - 1 &&
-                    line.productId === null &&
-                    !line.isTemporary
-
-                  return (
-                    <tr
-                      key={line.id}
-                      ref={selected ? selectedRowRef : undefined}
-                      className={selected ? 'billing-row-selected' : ''}
-                      onClick={() => {
-                        setSelectedIndex(index)
-                        setActiveField('product')
-
-                        if (line.productId === null && !line.isTemporary) {
-                          setBarcodeInput('')
-                        }
-                      }}
-                    >
-                      <td className="product-column">
-                        {isBottomBlank && selected ? (
-                          <div className="product-entry">
-                            <input
-                              ref={barcodeInputRef}
-                              onFocus={() => setActiveField('product')}
-                              value={barcodeInput}
-                              onChange={(event) => handleBarcodeChange(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key !== 'Enter') {
-                                  return
-                                }
-
-                                event.preventDefault()
-                                event.stopPropagation()
-
-                                if (barcodeInput.trim()) {
-                                  if (handleQuickQuantity(barcodeInput)) {
-                                    return
-                                  }
-
-                                  void lookupBarcode()
-                                } else {
-                                  openItemSelector()
-                                }
-                              }}
-                              placeholder="Scan / search product"
-                              autoComplete="off"
-                              spellCheck={false}
-                            />
-                          </div>
-                        ) : line.isTemporary && selected && editingTemporaryProductName ? (
-                          <div className="product-entry">
-                            <input
-                              ref={temporaryProductNameInputRef}
-                              type="text"
-                              value={line.productName}
-                              onChange={(event) =>
-                                handleTemporaryProductNameChange(event.target.value)
-                              }
-                              onFocus={() => setActiveField('product')}
-                              onKeyDown={(event) => {
-                                if (event.key !== 'Enter') {
-                                  return
-                                }
-
-                                event.preventDefault()
-                                event.stopPropagation()
-
-                                handleTemporaryProductNameEnter()
-                              }}
-                              autoComplete="off"
-                              spellCheck={false}
-                            />
-                          </div>
-                        ) : (
-                          <span className={line.isTemporary ? 'temporary-general-item' : ''}>
-                            {line.productName}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="number-cell">
-                        {line.isTemporary && selected && activeField === 'mrp' ? (
-                          <input
-                            ref={mrpInputRef}
-                            className="billing-number-input"
-                            type="text"
-                            inputMode="decimal"
-                            value={mrpInput}
-                            onFocus={() => {
-                              setMrpInput(
-                                line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString()
-                              )
-                            }}
-                            onChange={(event) => handleMrpChange(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
-                                event.preventDefault()
-                                event.stopPropagation()
-
-                                commitMrp()
-                              }
-                            }}
-                          />
-                        ) : line.mrpPaise > 0 ? (
-                          formatRupees(line.mrpPaise)
-                        ) : (
-                          ''
-                        )}
-                      </td>
-
-                      <td className="number-cell">
-                        {line.productId !== null || line.isTemporary ? (
-                          selected && activeField === 'quantity' ? (
-                            <input
-                              disabled={isReadOnly}
-                              ref={quantityInputRef}
-                              className="billing-number-input"
-                              type="number"
-                              min="0"
-                              step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                              value={line.quantity === 0 ? '' : line.quantity}
-                              onChange={(event) => handleQuantityChange(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  handleQuantityEnter()
-                                }
-                              }}
-                            />
-                          ) : (
-                            line.quantity
-                          )
-                        ) : (
-                          ''
-                        )}
-                      </td>
-
-                      <td className="number-cell">
-                        {line.productId !== null || line.isTemporary ? (
-                          selected && activeField === 'free' ? (
-                            <input
-                              disabled={isReadOnly}
-                              ref={freeInputRef}
-                              className="billing-number-input"
-                              type="number"
-                              min="0"
-                              step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                              value={line.freeQuantity === 0 ? '' : line.freeQuantity}
-                              onChange={(event) => handleFreeChange(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  handleFreeEnter()
-                                }
-                              }}
-                            />
-                          ) : (
-                            line.freeQuantity
-                          )
-                        ) : (
-                          ''
-                        )}
-                      </td>
-
-                      <td className="number-cell">
-                        {line.productId !== null || line.isTemporary ? (
-                          selected && activeField === 'rate' ? (
-                            <input
-                              disabled={isReadOnly}
-                              ref={rateInputRef}
-                              className="billing-number-input"
-                              type="text"
-                              inputMode="decimal"
-                              value={rateInput}
-                              onFocus={() => {
-                                /*
-                                 * Load current rate into the editing
-                                 * value and select it.
-                                 */
-                                setRateInput(
-                                  line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
-                                )
-                              }}
-                              onChange={(event) => handleRateChange(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  commitRate()
-                                }
-                              }}
-                            />
-                          ) : line.ratePaise > 0 ? (
-                            formatRupees(line.ratePaise)
-                          ) : (
-                            ''
-                          )
-                        ) : (
-                          ''
-                        )}
-                      </td>
-
-                      <td className="number-cell amount-cell">
-                        {line.amountPaise > 0 ? formatRupees(line.amountPaise) : ''}
-                      </td>
-                    </tr>
-                  )
-                })}
-
-                {Array.from({
-                  length: Math.max(8, 12 - lines.length)
-                }).map((_, index) => (
-                  <tr key={`empty-${index}`} className="empty-row">
-                    <td />
-                    <td />
-                    <td />
-                    <td />
-                    <td />
-                    <td />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {quantityShortcutError && <div className="billing-error">{quantityShortcutError}</div>}
-
-          {barcodeNotFound && (
-            <div className="billing-not-found">
-              Product not found — General Item created for this bill
-            </div>
+          {showErrorDialog && (
+            <ErrorDialog
+              message={errorDialogMessage}
+              onClose={() => {
+                setShowErrorDialog(false)
+                setErrorDialogMessage('')
+              }}
+            />
           )}
         </div>
 
-        {isReadOnly ? (
-          <div className="billing-footer historical-billing-footer">
-            <span>↑↓ Select Row</span>
-
-            <button
-              type="button"
-              className={historicalActionIndex === 0 ? 'billing-action-selected' : ''}
-              onClick={() => {
-                setHistoricalActionIndex(0)
-                handleHistoricalAction('modify')
-              }}
-            >
-              MODIFY
-            </button>
-
-            <button
-              type="button"
-              className={historicalActionIndex === 1 ? 'billing-action-selected' : ''}
-              onClick={() => {
-                setHistoricalActionIndex(1)
-                handleHistoricalAction('print')
-              }}
-            >
-              PRINT
-            </button>
-
-            <button
-              type="button"
-              className={historicalActionIndex === 2 ? 'billing-action-selected' : ''}
-              onClick={() => {
-                setHistoricalActionIndex(2)
-                handleHistoricalAction('delete')
-              }}
-            >
-              DELETE
-            </button>
-
-            <span>←→ Actions</span>
-            <span>F3 Modify</span>
-            <span>Enter Action</span>
-            <span>Esc Back</span>
-          </div>
-        ) : mode === 'modify' ? (
-          <div className="billing-footer">
-            <span>F2 Add Item</span>
-            <span>Enter Add</span>
-            <span>Delete Remove</span>
-            <span>F6 Save</span>
-            <span>Esc Back</span>
-          </div>
-        ) : (
-          <div className="billing-footer">
-            <span>F1 Back</span>
-            <span>F2 Add Item</span>
-            <span>Enter Item Master</span>
-            <span>Delete Remove</span>
-            <span>F6 Payment</span>
-            <span>F9 Bill History</span>
-            <span>Ctrl+N New Bill</span>
-            <span>← Edit Bill No.</span>
-          </div>
-        )}
-
-        <div className="billing-summary">
-          <div>
-            <span>Subtotal</span>
-            <strong>₹{formatRupees(subtotalPaise)}</strong>
-          </div>
-
-          <div>
-            <span>Discount</span>
-            <strong>₹{formatRupees(discountPaise)}</strong>
-          </div>
-
-          <div className="billing-total">
-            <span>TOTAL</span>
-            <strong>₹{formatRupees(totalPaise)}</strong>
-          </div>
-        </div>
+        <ContextPanel mode="billing" />
       </div>
-      {!isHistoricalBill && showPayment && (
-        <Payment
-          session={session}
-          totalPaise={totalPaise}
-          onBack={() => {
-            setShowPayment(false)
-          }}
-          onComplete={(payment: PaymentResult) => {
-            setPendingPayment(payment)
-            setShowPayment(false)
-
-            void completeSale(payment)
-          }}
-        />
-      )}
-
-      {isHistoricalBill && !isReadOnly && showHistoricalPayment && historicalSession && (
-        <Payment
-          session={historicalSession}
-          totalPaise={
-            historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
-            historicalOriginalTotalPaise
-          }
-          onBack={() => {
-            setShowHistoricalPayment(false)
-            setPendingHistoricalPayment(null)
-          }}
-          onComplete={(payment: PaymentResult) => {
-            if (payment.mode === 'mixed') {
-              setQuantityShortcutError('Mixed payment is not supported for bill modification')
-              return
-            }
-            setPendingHistoricalPayment(payment)
-            setShowHistoricalPayment(false)
-            void saveHistoricalBill({
-              type: 'charge',
-              method: payment.mode === 'upi' ? 'upi' : 'cash',
-              amountPaise: payment.paidPaise
-            })
-          }}
-        />
-      )}
-
-      {isHistoricalBill && !isReadOnly && showHistoricalRefundConfirmation && historicalSession && (
-        <ConfirmDialog
-          title="REFUND"
-          message={`Refund ₹${(
-            Math.abs(
-              historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
-                historicalOriginalTotalPaise
-            ) / 100
-          ).toFixed(2)} to customer?`}
-          onConfirm={() => {
-            setShowHistoricalRefundConfirmation(false)
-
-            void saveHistoricalBill({
-              type: 'refund',
-              method: 'cash',
-              amountPaise: Math.abs(
-                historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0) -
-                  historicalOriginalTotalPaise
-              )
-            })
-          }}
-          onCancel={() => {
-            setShowHistoricalRefundConfirmation(false)
-          }}
-        />
-      )}
-
-      {!isHistoricalBill && showPrintConfirmation && (
-        <ConfirmDialog
-          title="Print Bill"
-          message={`Print bill ${displaySession.billNumber}?`}
-          onConfirm={() => printBill()}
-          onCancel={async () => {
-            setShowPrintConfirmation(false)
-            setPendingPayment(null)
-            await onBillCompleted(displaySession.billNumber)
-          }}
-        />
-      )}
-
-      {showErrorDialog && (
-        <ErrorDialog
-          message={errorDialogMessage}
-          onClose={() => {
-            setShowErrorDialog(false)
-            setErrorDialogMessage('')
-          }}
-        />
-      )}
     </>
   )
 }

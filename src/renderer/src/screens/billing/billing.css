@@ -1,4 +1,28 @@
 /* =========================================================
+   BILLING 80:20 LAYOUT
+   ========================================================= */
+
+.billing-layout {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+
+  overflow: hidden;
+
+  background: #f4f6f8;
+}
+
+.billing-main {
+  width: 80%;
+  min-width: 0;
+
+  height: 100%;
+
+  overflow: hidden;
+}
+
+/* =========================================================
    BILLING SCREEN
    Old-school ERP / Tally-style layout
    Visual style aligned with Purchase Entry

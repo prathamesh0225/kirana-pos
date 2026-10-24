@@ -109,6 +109,8 @@ const api = {
 
     getDashboardSalesSummary: () => ipcRenderer.invoke('billing:getDashboardSalesSummary'),
 
+    getContextData: () => ipcRenderer.invoke('billing:getContextData'),
+
     getSaleById: (saleId: number) => ipcRenderer.invoke('billing:getSaleById', saleId),
 
     updateSale: (input: {

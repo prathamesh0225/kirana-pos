@@ -1,0 +1,364 @@
+/* =========================================================
+   CONTEXT PANEL
+   ========================================================= */
+
+.context-panel {
+  width: 20%;
+  min-width: 250px;
+  max-width: 360px;
+
+  height: 100%;
+
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: #edf2f5;
+  color: #17232d;
+
+  border-left: 1px solid #aebdca;
+
+  font-family: "Courier New", Consolas, monospace;
+}
+
+.context-panel-blank {
+  overflow: hidden;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.context-panel-header {
+  flex: 0 0 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #31516b;
+  color: #ffffff;
+
+  border-bottom: 1px solid #1f384b;
+}
+
+.context-panel-title {
+  display: flex;
+  align-items: center;
+
+  height: 34px;
+
+  padding: 0 10px;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   EYE BUTTON
+   ========================================================= */
+
+.context-panel-eye {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 0;
+  border-left: 1px solid #49667b;
+
+  background: transparent;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.context-panel-eye:hover {
+  background: #49667b;
+}
+
+.context-panel-eye:active {
+  background: #1f384b;
+}
+
+/* =========================================================
+   HIDDEN STATE
+   ========================================================= */
+
+.context-panel-hidden {
+  overflow: hidden;
+}
+
+.context-panel-hidden-message {
+  padding: 12px 10px;
+
+  color: #667784;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.context-panel-content {
+  flex: 1;
+  min-height: 0;
+
+  /*
+   * Context panel scrolls vertically when the window
+   * becomes smaller than the available content height.
+   *
+   * Individual product lists still have their own
+   * scrolling for long lists.
+   */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   MAIN CONTENT SCROLLBAR
+   ========================================================= */
+
+.context-panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.context-panel-content::-webkit-scrollbar-track {
+  background: #e1e6ea;
+}
+
+.context-panel-content::-webkit-scrollbar-thumb {
+  background: #9aaab6;
+
+  border: 1px solid #e1e6ea;
+}
+
+.context-panel-content::-webkit-scrollbar-thumb:hover {
+  background: #7f929f;
+}
+
+/* =========================================================
+   SECTION
+   ========================================================= */
+
+.context-section {
+  padding: 9px 8px;
+
+  border-bottom: 1px solid #b8c5ce;
+}
+
+.context-section-title {
+  margin-bottom: 2px;
+
+  color: #31516b;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.context-section-title.urgent {
+  color: #8b0000;
+}
+
+.context-section-title.expiry {
+  color: #8a5a00;
+}
+
+.context-section-hint {
+  margin-bottom: 6px;
+
+  color: #667784;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   PRODUCT LIST
+   ========================================================= */
+
+.context-product-list {
+  /*
+   * 1-4 items:
+   *   Section shrinks naturally to fit the items.
+   *
+   * 5-15 items:
+   *   Exactly 4 items are visible.
+   *   Remaining items scroll inside this section only.
+   */
+  max-height: 201px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  padding-right: 3px;
+
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   SECTION SCROLLBAR
+   ========================================================= */
+
+.context-product-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.context-product-list::-webkit-scrollbar-track {
+  background: #e1e6ea;
+}
+
+.context-product-list::-webkit-scrollbar-thumb {
+  background: #9aaab6;
+
+  border: 1px solid #e1e6ea;
+}
+
+.context-product-list::-webkit-scrollbar-thumb:hover {
+  background: #7f929f;
+}
+
+/* =========================================================
+   PRODUCT
+   ========================================================= */
+
+.context-product {
+  flex: 0 0 48px;
+
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+
+  box-sizing: border-box;
+
+  padding: 5px 7px;
+
+  background: #ffffff;
+
+  border: 1px solid #c5d0d8;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  gap: 3px;
+}
+
+/* =========================================================
+   PRODUCT TOP ROW
+   ========================================================= */
+
+.context-product-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.context-product-name {
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: #17232d;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   EXPIRY WARNING
+   ========================================================= */
+
+.context-expiry-warning {
+  flex: 0 0 auto;
+
+  margin-top: 0;
+
+  color: #8a5a00;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  line-height: 1.2;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   PRODUCT META / SECOND ROW
+   ========================================================= */
+
+.context-product-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  margin-top: 0;
+
+  color: #526572;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  font-variant-numeric: tabular-nums;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   RANK
+   ========================================================= */
+
+.context-rank {
+  display: inline-block;
+
+  width: 18px;
+
+  color: #31516b;
+}
+
+/* =========================================================
+   EMPTY / LOADING
+   ========================================================= */
+
+.context-empty,
+.context-panel-loading {
+  padding: 8px 4px;
+
+  color: #74828c;
+
+  font-size: 11px;
+  font-weight: 700;
+}

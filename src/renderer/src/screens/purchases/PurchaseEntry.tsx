@@ -182,6 +182,53 @@ function parseDisplayDate(value: string): string | null {
   return `${yearText}-${monthText}-${dayText}`
 }
 
+function parseExpiryDate(value: string): string | null {
+  const input = value.trim()
+
+  if (!input) {
+    return null
+  }
+
+  // Fast entry: DDMMYY
+  // Example: 251226 -> 2026-12-25
+  if (/^\d{6}$/.test(input)) {
+    const day = Number(input.slice(0, 2))
+    const month = Number(input.slice(2, 4))
+    const year = 2000 + Number(input.slice(4, 6))
+
+    const date = new Date(year, month - 1, day)
+
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null
+    }
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  // Short entry: DD/MM/YY
+  // Example: 25/12/26 -> 2026-12-25
+  const shortMatch = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(input)
+
+  if (shortMatch) {
+    const [, dayText, monthText, yearText] = shortMatch
+
+    const day = Number(dayText)
+    const month = Number(monthText)
+    const year = 2000 + Number(yearText)
+
+    const date = new Date(year, month - 1, day)
+
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null
+    }
+
+    return `${year}-${monthText}-${dayText}`
+  }
+
+  // Normal entry: DD/MM/YYYY
+  return parseDisplayDate(input)
+}
+
 export default function PurchaseEntry({
   supplier,
   purchaseId,
@@ -737,6 +784,24 @@ export default function PurchaseEntry({
       }
     }
 
+    if (activeField === 'expiry') {
+      const digits = value.replace(/\D/g, '').slice(0, 8)
+
+      let formatted = digits
+
+      if (digits.length > 2) {
+        formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+      }
+
+      if (digits.length > 4) {
+        formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+      }
+
+      setEditInput(formatted)
+      setSaveMessage('')
+      return
+    }
+
     setEditInput(value)
     setSaveMessage('')
   }
@@ -861,8 +926,26 @@ export default function PurchaseEntry({
     }
 
     if (activeField === 'expiry') {
+      const value = editInput.trim()
+
+      // Expiry is optional.
+      if (!value) {
+        updateLine(selectedIndex, {
+          expiryDate: ''
+        })
+
+        return true
+      }
+
+      const parsedDate = parseExpiryDate(value)
+
+      if (!parsedDate) {
+        setSaveMessage('Please enter expiry as DD/MM/YYYY or DDMMYY.')
+        return false
+      }
+
       updateLine(selectedIndex, {
-        expiryDate: editInput.trim()
+        expiryDate: parsedDate
       })
 
       return true
@@ -1050,7 +1133,7 @@ export default function PurchaseEntry({
           return
         }
 
-        setEditInput(selectedLine.expiryDate)
+        setEditInput(selectedLine.expiryDate ? formatDisplayDate(selectedLine.expiryDate) : '')
         setActiveField('expiry')
         return
 

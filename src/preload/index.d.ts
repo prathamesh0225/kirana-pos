@@ -18,6 +18,21 @@ type ProductRecord = {
   updated_at: string
 }
 
+type BillingContextProduct = {
+  productId: number
+  productName: string
+  stockQuantity: number
+  lowStockLevel: number
+  soldQuantity: number
+  expiryDate?: string | null
+}
+
+type BillingContextData = {
+  urgentStock: BillingContextProduct[]
+  topSellers: BillingContextProduct[]
+  expiringStock: BillingContextProduct[]
+}
+
 type EscPosReceiptLine = {
   productName: string
   mrpPaise: number
@@ -199,6 +214,8 @@ declare global {
         >
 
         allocateNextBillNumber: (slotId: 0 | 1) => Promise<string>
+
+        getContextData: () => Promise<BillingContextData>
 
         completeSale: (input: unknown) => Promise<{
           saleId: number
