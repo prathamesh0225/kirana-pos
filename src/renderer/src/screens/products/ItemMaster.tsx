@@ -15,6 +15,8 @@ import StockHistory from './StockHistory'
 
 import BarcodePrintDialog from '../../components/barcode-print-dialog/BarcodePrintDialog'
 
+import ContextPanel from '../../components/context-panel/ContextPanel'
+
 type ItemMasterProps = {
   mode?: 'manage' | 'select'
   onBack: () => void
@@ -540,11 +542,149 @@ function ItemMaster({
   const selectedProduct = products[selectedIndex]
 
   return (
-    <div className="item-master">
-      <div className="item-master-header">
-        <div className="item-master-title">ITEM MASTER</div>
+    <div className="item-master-layout">
+      <div className="item-master">
+        <div className="item-master-header">
+          <div className="item-master-title">ITEM MASTER</div>
 
-        <div className="item-master-shortcuts">
+          <div className="item-master-shortcuts">
+            <span>↑↓ Select</span>
+            <span>F2 Add</span>
+            <span>F3 Edit</span>
+            <span>F4 Stock Adj</span>
+            <span>F5 History</span>
+            <span>F6 Low Stock</span>
+            <span>Enter No Action</span>
+            <span>Esc Back</span>
+            <span>DELETE Enable/Disable</span>
+          </div>
+        </div>
+
+        <div className="item-master-table-wrap">
+          <table className="item-master-table">
+            <thead>
+              <tr>
+                <th className="select-column"></th>
+
+                <th>Product</th>
+
+                <th className="money-column">MRP</th>
+
+                <th className="money-column">Rate</th>
+
+                <th className="quantity-column">Stock</th>
+
+                <th className="quantity-column">Low</th>
+
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="table-message">
+                    Loading...
+                  </td>
+                </tr>
+              )}
+
+              {!loading && error && (
+                <tr>
+                  <td colSpan={8} className="table-message error">
+                    {error}
+                  </td>
+                </tr>
+              )}
+
+              {!loading && !error && products.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="table-message">
+                    No products found
+                  </td>
+                </tr>
+              )}
+
+              {!loading &&
+                !error &&
+                products.map((product, index) => {
+                  const selected = index === selectedIndex
+
+                  const searchMatches =
+                    searchTerm.trim() !== '' &&
+                    productMatchesSearch(product, searchTerm.trim().toLowerCase())
+
+                  return (
+                    <tr
+                      key={product.id}
+                      ref={selected ? selectedRowRef : null}
+                      className={
+                        selected ? 'selected-row' : searchMatches ? 'search-match-row' : ''
+                      }
+                      onClick={(): void => {
+                        setSelectedIndex(index)
+                        searchRef.current?.focus()
+                      }}
+                      onDoubleClick={(): void => {
+                        rememberSelectedProduct(product.id)
+                        onEditItem(product.id)
+                      }}
+                    >
+                      <td className="select-column">{selected ? '>' : ''}</td>
+
+                      <td>{product.name}</td>
+
+                      <td className="money-column">{formatRupees(product.mrp_paise)}</td>
+
+                      <td className="money-column">{formatRupees(product.selling_price_paise)}</td>
+
+                      <td className="quantity-column">{product.stock_quantity}</td>
+
+                      <td className="quantity-column">{product.low_stock_level}</td>
+
+                      <td>{product.is_active ? 'Active' : 'Disabled'}</td>
+                    </tr>
+                  )
+                })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="item-master-search-row">
+          <label htmlFor="item-search">Search:</label>
+
+          <input
+            ref={searchRef}
+            id="item-search"
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            autoComplete="off"
+            spellCheck={false}
+          />
+
+          {searchError && <span className="item-master-search-error">{searchError}</span>}
+
+          <label htmlFor="status-filter">Status:</label>
+
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as 'active' | 'disabled' | 'all')
+            }}
+          >
+            <option value="active">Active</option>
+
+            <option value="disabled">Disabled</option>
+
+            <option value="all">All</option>
+          </select>
+
+          <span className="item-count">{products.length} items</span>
+        </div>
+
+        <div className="item-master-footer">
           <span>↑↓ Select</span>
           <span>F2 Add</span>
           <span>F3 Edit</span>
@@ -555,292 +695,162 @@ function ItemMaster({
           <span>Esc Back</span>
           <span>DELETE Enable/Disable</span>
         </div>
-      </div>
 
-      <div className="item-master-table-wrap">
-        <table className="item-master-table">
-          <thead>
-            <tr>
-              <th className="select-column"></th>
+        <div className="item-master-details">
+          {!selectedProduct ? (
+            <div className="item-master-details-empty">No product selected</div>
+          ) : (
+            <>
+              <div className="item-master-details-title">PRODUCT DETAILS</div>
 
-              <th>Product</th>
+              <div className="item-master-details-grid">
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Product</span>
 
-              <th className="money-column">MRP</th>
+                  <span className="item-master-detail-value">{selectedProduct.name}</span>
+                </div>
 
-              <th className="money-column">Rate</th>
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Barcode</span>
 
-              <th className="quantity-column">Stock</th>
+                  <span className="item-master-detail-value">{selectedProduct.barcode || '—'}</span>
+                </div>
 
-              <th className="quantity-column">Low</th>
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">MRP</span>
 
-              <th>Status</th>
-            </tr>
-          </thead>
+                  <span className="item-master-detail-value">
+                    {formatRupees(selectedProduct.mrp_paise)}
+                  </span>
+                </div>
 
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={8} className="table-message">
-                  Loading...
-                </td>
-              </tr>
-            )}
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Selling Rate</span>
 
-            {!loading && error && (
-              <tr>
-                <td colSpan={8} className="table-message error">
-                  {error}
-                </td>
-              </tr>
-            )}
+                  <span className="item-master-detail-value">
+                    {formatRupees(selectedProduct.selling_price_paise)}
+                  </span>
+                </div>
 
-            {!loading && !error && products.length === 0 && (
-              <tr>
-                <td colSpan={8} className="table-message">
-                  No products found
-                </td>
-              </tr>
-            )}
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Purchasing Price</span>
 
-            {!loading &&
-              !error &&
-              products.map((product, index) => {
-                const selected = index === selectedIndex
+                  <span className="item-master-detail-value">
+                    {formatRupees(selectedProduct.purchase_price_paise)}
+                  </span>
+                </div>
 
-                const searchMatches =
-                  searchTerm.trim() !== '' &&
-                  productMatchesSearch(product, searchTerm.trim().toLowerCase())
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Stock</span>
 
-                return (
-                  <tr
-                    key={product.id}
-                    ref={selected ? selectedRowRef : null}
-                    className={selected ? 'selected-row' : searchMatches ? 'search-match-row' : ''}
-                    onClick={(): void => {
-                      setSelectedIndex(index)
-                      searchRef.current?.focus()
-                    }}
-                    onDoubleClick={(): void => {
-                      rememberSelectedProduct(product.id)
-                      onEditItem(product.id)
-                    }}
-                  >
-                    <td className="select-column">{selected ? '>' : ''}</td>
+                  <span className="item-master-detail-value">{selectedProduct.stock_quantity}</span>
+                </div>
 
-                    <td>{product.name}</td>
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Low Stock</span>
 
-                    <td className="money-column">{formatRupees(product.mrp_paise)}</td>
+                  <span className="item-master-detail-value">
+                    {selectedProduct.low_stock_level}
+                  </span>
+                </div>
 
-                    <td className="money-column">{formatRupees(product.selling_price_paise)}</td>
+                <div className="item-master-detail">
+                  <span className="item-master-detail-label">Status</span>
 
-                    <td className="quantity-column">{product.stock_quantity}</td>
-
-                    <td className="quantity-column">{product.low_stock_level}</td>
-
-                    <td>{product.is_active ? 'Active' : 'Disabled'}</td>
-                  </tr>
-                )
-              })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="item-master-search-row">
-        <label htmlFor="item-search">Search:</label>
-
-        <input
-          ref={searchRef}
-          id="item-search"
-          type="text"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          autoComplete="off"
-          spellCheck={false}
-        />
-
-        {searchError && <span className="item-master-search-error">{searchError}</span>}
-
-        <label htmlFor="status-filter">Status:</label>
-
-        <select
-          id="status-filter"
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(event.target.value as 'active' | 'disabled' | 'all')
-          }}
-        >
-          <option value="active">Active</option>
-
-          <option value="disabled">Disabled</option>
-
-          <option value="all">All</option>
-        </select>
-
-        <span className="item-count">{products.length} items</span>
-      </div>
-
-      <div className="item-master-footer">
-        <span>↑↓ Select</span>
-        <span>F2 Add</span>
-        <span>F3 Edit</span>
-        <span>F4 Stock Adj</span>
-        <span>F5 History</span>
-        <span>F6 Low Stock</span>
-        <span>Enter No Action</span>
-        <span>Esc Back</span>
-        <span>DELETE Enable/Disable</span>
-      </div>
-
-      <div className="item-master-details">
-        {!selectedProduct ? (
-          <div className="item-master-details-empty">No product selected</div>
-        ) : (
-          <>
-            <div className="item-master-details-title">PRODUCT DETAILS</div>
-
-            <div className="item-master-details-grid">
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Product</span>
-
-                <span className="item-master-detail-value">{selectedProduct.name}</span>
+                  <span className="item-master-detail-value">
+                    {selectedProduct.is_active ? 'Active' : 'Disabled'}
+                  </span>
+                </div>
               </div>
+            </>
+          )}
+        </div>
 
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Barcode</span>
-
-                <span className="item-master-detail-value">{selectedProduct.barcode || '—'}</span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">MRP</span>
-
-                <span className="item-master-detail-value">
-                  {formatRupees(selectedProduct.mrp_paise)}
-                </span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Selling Rate</span>
-
-                <span className="item-master-detail-value">
-                  {formatRupees(selectedProduct.selling_price_paise)}
-                </span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Purchasing Price</span>
-
-                <span className="item-master-detail-value">
-                  {formatRupees(selectedProduct.purchase_price_paise)}
-                </span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Stock</span>
-
-                <span className="item-master-detail-value">{selectedProduct.stock_quantity}</span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Low Stock</span>
-
-                <span className="item-master-detail-value">{selectedProduct.low_stock_level}</span>
-              </div>
-
-              <div className="item-master-detail">
-                <span className="item-master-detail-label">Status</span>
-
-                <span className="item-master-detail-value">
-                  {selectedProduct.is_active ? 'Active' : 'Disabled'}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {statusChangeProduct && (
-        <ConfirmDialog
-          title={statusChangeProduct.is_active ? 'Disable Product' : 'Enable Product'}
-          message={
-            statusChangeProduct.is_active ? (
-              <>
-                Disable <strong>{statusChangeProduct.name}</strong>
-                ?
-                <br />
-                This product will no longer appear in normal billing and product search.
-              </>
-            ) : (
-              <>
-                Enable <strong>{statusChangeProduct.name}</strong>
-                ?
-                <br />
-                This product will become available in normal billing and product search.
-              </>
-            )
-          }
-          confirmText={statusChangeProduct.is_active ? 'Disable' : 'Enable'}
-          cancelText="Cancel"
-          variant="warning"
-          onConfirm={async (): Promise<void> => {
-            try {
-              setStatusChanging(true)
-              setError('')
-
-              if (statusChangeProduct.is_active) {
-                await window.kirana.products.disable(statusChangeProduct.id)
-              } else {
-                await window.kirana.products.enable(statusChangeProduct.id)
-              }
-
-              setStatusChangeProduct(null)
-
-              await loadProducts()
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Unable to change product status'
-
-              setError(message)
-            } finally {
-              setStatusChanging(false)
+        {statusChangeProduct && (
+          <ConfirmDialog
+            title={statusChangeProduct.is_active ? 'Disable Product' : 'Enable Product'}
+            message={
+              statusChangeProduct.is_active ? (
+                <>
+                  Disable <strong>{statusChangeProduct.name}</strong>
+                  ?
+                  <br />
+                  This product will no longer appear in normal billing and product search.
+                </>
+              ) : (
+                <>
+                  Enable <strong>{statusChangeProduct.name}</strong>
+                  ?
+                  <br />
+                  This product will become available in normal billing and product search.
+                </>
+              )
             }
+            confirmText={statusChangeProduct.is_active ? 'Disable' : 'Enable'}
+            cancelText="Cancel"
+            variant="warning"
+            onConfirm={async (): Promise<void> => {
+              try {
+                setStatusChanging(true)
+                setError('')
+
+                if (statusChangeProduct.is_active) {
+                  await window.kirana.products.disable(statusChangeProduct.id)
+                } else {
+                  await window.kirana.products.enable(statusChangeProduct.id)
+                }
+
+                setStatusChangeProduct(null)
+
+                await loadProducts()
+              } catch (err) {
+                const message =
+                  err instanceof Error ? err.message : 'Unable to change product status'
+
+                setError(message)
+              } finally {
+                setStatusChanging(false)
+              }
+            }}
+            onCancel={(): void => {
+              if (!statusChanging) {
+                setStatusChangeProduct(null)
+              }
+            }}
+          />
+        )}
+
+        <DateFilterDialog
+          open={stockHistoryDateFilterOpen}
+          title="Stock History - Date Filter"
+          initialFromDate={stockHistoryDateRange.fromDate}
+          initialToDate={stockHistoryDateRange.toDate}
+          showPresets
+          onApply={(range: DateRange): void => {
+            setStockHistoryDateRange(range)
+
+            setStockHistoryDateFilterOpen(false)
           }}
           onCancel={(): void => {
-            if (!statusChanging) {
-              setStatusChangeProduct(null)
-            }
+            setStockHistoryDateFilterOpen(false)
+
+            setStockHistoryProduct(null)
           }}
         />
-      )}
 
-      <DateFilterDialog
-        open={stockHistoryDateFilterOpen}
-        title="Stock History - Date Filter"
-        initialFromDate={stockHistoryDateRange.fromDate}
-        initialToDate={stockHistoryDateRange.toDate}
-        showPresets
-        onApply={(range: DateRange): void => {
-          setStockHistoryDateRange(range)
+        <BarcodePrintDialog
+          open={barcodePrintProduct !== null}
+          product={barcodePrintProduct as ProductRecord}
+          onClose={(): void => {
+            setBarcodePrintProduct(null)
 
-          setStockHistoryDateFilterOpen(false)
-        }}
-        onCancel={(): void => {
-          setStockHistoryDateFilterOpen(false)
-
-          setStockHistoryProduct(null)
-        }}
-      />
-
-      <BarcodePrintDialog
-        open={barcodePrintProduct !== null}
-        product={barcodePrintProduct as ProductRecord}
-        onClose={(): void => {
-          setBarcodePrintProduct(null)
-
-          requestAnimationFrame(() => {
-            searchRef.current?.focus()
-          })
-        }}
-      />
+            requestAnimationFrame(() => {
+              searchRef.current?.focus()
+            })
+          }}
+        />
+      </div>
+      <ContextPanel mode="blank" />
     </div>
   )
 }

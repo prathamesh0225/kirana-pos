@@ -4,6 +4,7 @@ import DateFilterDialog, {
   type DateRange
 } from '../../components/date-filter-dialog/DateFilterDialog'
 import './bill-history.css'
+import ContextPanel from '../../components/context-panel/ContextPanel'
 
 type BillHistoryProps = {
   onBack: () => void
@@ -376,77 +377,82 @@ export default function BillHistory({ onBack, onOpenBill, onModifyBill }: BillHi
    * Bill History UI.
    */
   return (
-    <div className="bill-history">
-      <div className="bill-history-header">
-        <div className="bill-history-title">BILL HISTORY</div>
+    <div className="bill-history-layout">
+      <div className="bill-history">
+        <div className="bill-history-header">
+          <div className="bill-history-title">BILL HISTORY</div>
 
-        <div className="bill-history-count">Bills: {bills.length}</div>
-      </div>
-
-      {loading && <div className="bill-history-message">Loading bill history...</div>}
-
-      {!loading && error && <div className="bill-history-message bill-history-error">{error}</div>}
-
-      {!loading && !error && bills.length === 0 && (
-        <div className="bill-history-message">No bills found for the selected date range.</div>
-      )}
-
-      {!loading && !error && bills.length > 0 && (
-        <div className="bill-history-table-wrapper">
-          <table className="bill-history-table">
-            <thead>
-              <tr>
-                <th className="col-bill">Bill No.</th>
-
-                <th className="col-date">Date</th>
-
-                <th className="col-money">Original</th>
-
-                <th className="col-money">Refunded</th>
-
-                <th className="col-money">Net</th>
-
-                <th className="col-status">Status</th>
-              </tr>
-            </thead>
-
-            <tbody ref={tableRef}>
-              {bills.map((bill, index) => {
-                const selected = index === selectedIndex
-
-                return (
-                  <tr
-                    key={bill.id}
-                    data-row-index={index}
-                    className={selected ? 'bill-history-row selected' : 'bill-history-row'}
-                    onClick={() => setSelectedIndex(index)}
-                    onDoubleClick={() => onOpenBill(bill.id)}
-                  >
-                    <td className="col-bill">{bill.billNumber}</td>
-
-                    <td className="col-date">{formatDate(bill.saleDate)}</td>
-
-                    <td className="col-money">₹{formatMoney(bill.totalPaise)}</td>
-
-                    <td className="col-money">₹{formatMoney(bill.refundedPaise)}</td>
-
-                    <td className="col-money">₹{formatMoney(bill.netPaise)}</td>
-
-                    <td className="col-status">{getStatusLabel(bill.status)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="bill-history-count">Bills: {bills.length}</div>
         </div>
-      )}
 
-      <div className="bill-history-footer">
-        <span>↑↓ Select</span>
-        <span>Enter View</span>
-        <span>F3 Modify Bill</span>
-        <span>Esc Back</span>
+        {loading && <div className="bill-history-message">Loading bill history...</div>}
+
+        {!loading && error && (
+          <div className="bill-history-message bill-history-error">{error}</div>
+        )}
+
+        {!loading && !error && bills.length === 0 && (
+          <div className="bill-history-message">No bills found for the selected date range.</div>
+        )}
+
+        {!loading && !error && bills.length > 0 && (
+          <div className="bill-history-table-wrapper">
+            <table className="bill-history-table">
+              <thead>
+                <tr>
+                  <th className="col-bill">Bill No.</th>
+
+                  <th className="col-date">Date</th>
+
+                  <th className="col-money">Original</th>
+
+                  <th className="col-money">Refunded</th>
+
+                  <th className="col-money">Net</th>
+
+                  <th className="col-status">Status</th>
+                </tr>
+              </thead>
+
+              <tbody ref={tableRef}>
+                {bills.map((bill, index) => {
+                  const selected = index === selectedIndex
+
+                  return (
+                    <tr
+                      key={bill.id}
+                      data-row-index={index}
+                      className={selected ? 'bill-history-row selected' : 'bill-history-row'}
+                      onClick={() => setSelectedIndex(index)}
+                      onDoubleClick={() => onOpenBill(bill.id)}
+                    >
+                      <td className="col-bill">{bill.billNumber}</td>
+
+                      <td className="col-date">{formatDate(bill.saleDate)}</td>
+
+                      <td className="col-money">₹{formatMoney(bill.totalPaise)}</td>
+
+                      <td className="col-money">₹{formatMoney(bill.refundedPaise)}</td>
+
+                      <td className="col-money">₹{formatMoney(bill.netPaise)}</td>
+
+                      <td className="col-status">{getStatusLabel(bill.status)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="bill-history-footer">
+          <span>↑↓ Select</span>
+          <span>Enter View</span>
+          <span>F3 Modify Bill</span>
+          <span>Esc Back</span>
+        </div>
       </div>
+      <ContextPanel mode="bill-history" saleId={bills[selectedIndex]?.id} />
     </div>
   )
 }

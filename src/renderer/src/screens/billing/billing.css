@@ -242,12 +242,17 @@
   font-size: 20px;
 }
 
-.billing-table .product-column {
+/* =========================================================
+   BILLING TABLE COLUMN WIDTHS
+   ========================================================= */
+
+/* PRODUCT */
+.billing-table .billing-col-product {
   width: 46%;
 }
 
-.billing-table th:not(.product-column),
-.billing-table td:not(.product-column) {
+/* MRP, QTY, FREE, RATE, AMOUNT */
+.billing-table .billing-col-number {
   width: 10.8%;
 }
 
@@ -748,4 +753,23 @@
   font-size: 11px;
   color: #666;
   white-space: nowrap;
+}
+
+
+.billing-deleted-cell {
+  padding: 3px 8px !important;
+
+  text-align: center !important;
+
+  /* background: #f1e2e2 !important; */
+
+  font-size: 20px !important;
+  font-weight: 800 !important;
+
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.billing-table tbody tr:has(.billing-deleted-cell) > td {
+  color: #7a7a7a;
 }

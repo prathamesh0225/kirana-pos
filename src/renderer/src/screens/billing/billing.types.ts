@@ -19,6 +19,8 @@ export type BillingLine = {
   freeQuantity: number
   ratePaise: number
   amountPaise: number
+
+  deleted?: boolean
 }
 
 export type BillingSession = {

@@ -342,6 +342,7 @@ declare global {
           id: number
           invoiceNumber: string
           purchaseDate: string
+          createdAt: string
           supplierId: number
           supplierName: string
           subtotalPaise: number

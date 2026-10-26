@@ -139,6 +139,8 @@ function Billing({
 }: BillingProps): React.JSX.Element {
   const [editingBillNumber, setEditingBillNumber] = useState(false)
   const billNumberInputRef = useRef<HTMLInputElement>(null)
+  const customerMobileInputRef = useRef<HTMLInputElement>(null)
+  const customerNameInputRef = useRef<HTMLInputElement>(null)
 
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [activeField, setActiveField] = useState<BillingField>('product')
@@ -242,7 +244,7 @@ function Billing({
       }
 
       const billLines = historicalSession.lines.filter(
-        (line) => line.productId !== null || line.isTemporary
+        (line) => !line.deleted && (line.productId !== null || line.isTemporary)
       )
 
       const receipt = {
@@ -307,7 +309,7 @@ function Billing({
         customerMobile: displaySession.customerMobile || undefined,
 
         lines: lines
-          .filter((line) => line.productId !== null || line.isTemporary)
+          .filter((line) => !line.deleted && (line.productId !== null || line.isTemporary))
           .map((line) => ({
             productName: line.productName,
             mrpPaise: line.mrpPaise,
@@ -370,7 +372,11 @@ function Billing({
   }
 
   const subtotalPaise = useMemo(
-    () => lines.reduce((total, line) => total + Math.round(line.mrpPaise * line.quantity), 0),
+    () =>
+      lines.reduce(
+        (total, line) => (line.deleted ? total : total + Math.round(line.mrpPaise * line.quantity)),
+        0
+      ),
     [lines]
   )
 
@@ -378,7 +384,9 @@ function Billing({
     () =>
       lines.reduce(
         (total, line) =>
-          total + Math.max(0, Math.round((line.mrpPaise - line.ratePaise) * line.quantity)),
+          line.deleted
+            ? total
+            : total + Math.max(0, Math.round((line.mrpPaise - line.ratePaise) * line.quantity)),
         0
       ),
     [lines]
@@ -548,7 +556,9 @@ function Billing({
       return
     }
     function validateBillBeforePayment(): string | null {
-      const billLines = lines.filter((line) => line.productId !== null || line.isTemporary)
+      const billLines = lines.filter(
+        (line) => !line.deleted && (line.productId !== null || line.isTemporary)
+      )
 
       if (billLines.length === 0) {
         return 'Cannot proceed to payment. Bill has no items.'
@@ -697,27 +707,31 @@ function Billing({
 
         const selectedLine = lines[selectedIndex]
 
-        if (!selectedLine || (selectedLine.productId === null && !selectedLine.isTemporary)) {
+        if (
+          !selectedLine ||
+          selectedLine.deleted ||
+          (selectedLine.productId === null && !selectedLine.isTemporary)
+        ) {
           return
         }
 
-        updateCurrentSession((currentSession) => {
-          const remainingLines = currentSession.lines.filter((_, index) => index !== selectedIndex)
-
-          return {
-            ...currentSession,
-            lines: remainingLines.length > 0 ? remainingLines : [createEmptyLine()]
-          }
-        })
-
-        setSelectedIndex((currentIndex) => {
-          const newLength = Math.max(lines.length - 1, 1)
-          return Math.min(currentIndex, newLength - 1)
-        })
+        updateCurrentSession((currentSession) => ({
+          ...currentSession,
+          lines: currentSession.lines.map((line, index) =>
+            index === selectedIndex
+              ? {
+                  ...line,
+                  deleted: true,
+                  amountPaise: 0
+                }
+              : line
+          )
+        }))
 
         setActiveField('product')
         setBarcodeInput('')
         setRateInput('')
+
         return
       }
 
@@ -1528,7 +1542,7 @@ function Billing({
     }
 
     const billLines = historicalSession.lines.filter(
-      (line) => line.productId !== null || line.isTemporary
+      (line) => !line.deleted && (line.productId !== null || line.isTemporary)
     )
 
     if (billLines.length === 0) {
@@ -1604,7 +1618,10 @@ function Billing({
       return
     }
 
-    const newTotal = historicalSession.lines.reduce((total, line) => total + line.amountPaise, 0)
+    const newTotal = historicalSession.lines.reduce(
+      (total, line) => (line.deleted ? total : total + line.amountPaise),
+      0
+    )
 
     const difference = newTotal - historicalOriginalTotalPaise
 
@@ -1632,7 +1649,9 @@ function Billing({
         billNumber: displaySession.billNumber,
         customerName: displaySession.customerName,
         customerMobile: displaySession.customerMobile,
-        lines: lines.filter((line) => line.productId !== null || line.isTemporary),
+        lines: lines.filter(
+          (line) => !line.deleted && (line.productId !== null || line.isTemporary)
+        ),
         payment
       })
 
@@ -1695,10 +1714,18 @@ function Billing({
           setBatchSelectorProduct(null)
           setAvailableBatches([])
 
-          setSelectedIndex(lines.length - 1)
+          const lastIndex = lines.length - 1
+
+          setSelectedIndex(lastIndex)
           setActiveField('product')
           setBarcodeInput('')
+          setBarcodeNotFound(false)
+          setEditingTemporaryProductName(false)
           setRateInput('')
+
+          requestAnimationFrame(() => {
+            barcodeInputRef.current?.focus()
+          })
         }}
       />
     )
@@ -1751,7 +1778,43 @@ function Billing({
 
   return (
     <>
-      <div className="billing-layout">
+      <div
+        className="billing-layout"
+        onMouseDown={(event) => {
+          if (isReadOnly || showPayment) {
+            return
+          }
+
+          const target = event.target as HTMLElement
+
+          // Allow clicks on editable header fields.
+          if (target.closest('input, textarea, button, select, [contenteditable="true"]')) {
+            return
+          }
+
+          const lastIndex = lines.length - 1
+          const lastLine = lines[lastIndex]
+
+          const isBlankRow = lastLine && lastLine.productId === null && !lastLine.isTemporary
+
+          if (!isBlankRow) {
+            return
+          }
+
+          event.preventDefault()
+
+          setSelectedIndex(lastIndex)
+          setActiveField('product')
+          setBarcodeInput('')
+          setBarcodeNotFound(false)
+          setEditingTemporaryProductName(false)
+          setRateInput('')
+
+          requestAnimationFrame(() => {
+            barcodeInputRef.current?.focus()
+          })
+        }}
+      >
         <div className="billing-main">
           <div className="billing-screen">
             <div className="billing-title-bar">
@@ -1776,10 +1839,29 @@ function Billing({
                         }))
                       }}
                       onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === 'Escape') {
+                        if (event.key === 'Enter') {
                           event.preventDefault()
+                          event.stopPropagation()
+
                           setEditingBillNumber(false)
+
+                          requestAnimationFrame(() => {
+                            customerMobileInputRef.current?.focus()
+                            customerMobileInputRef.current?.select()
+                          })
+
+                          return
+                        }
+
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          event.stopPropagation()
+
+                          setEditingBillNumber(false)
+
                           setActiveField('product')
+
+                          return
                         }
                       }}
                       autoComplete="off"
@@ -1793,8 +1875,20 @@ function Billing({
                   <label>Mobile :</label>
 
                   <input
+                    ref={customerMobileInputRef}
                     value={customerMobile}
                     onChange={(event) => handleCustomerMobileChange(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        event.stopPropagation()
+
+                        requestAnimationFrame(() => {
+                          customerNameInputRef.current?.focus()
+                          customerNameInputRef.current?.select()
+                        })
+                      }
+                    }}
                     readOnly={isReadOnly}
                   />
                 </div>
@@ -1810,8 +1904,28 @@ function Billing({
                   <label>Name :</label>
 
                   <input
+                    ref={customerNameInputRef}
                     value={customerName}
                     onChange={(event) => handleCustomerNameChange(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        event.stopPropagation()
+
+                        const lastIndex = lines.length - 1
+
+                        setSelectedIndex(lastIndex)
+                        setActiveField('product')
+                        setBarcodeInput('')
+                        setBarcodeNotFound(false)
+                        setEditingTemporaryProductName(false)
+                        setRateInput('')
+
+                        requestAnimationFrame(() => {
+                          barcodeInputRef.current?.focus()
+                        })
+                      }
+                    }}
                     readOnly={isReadOnly}
                   />
                 </div>
@@ -1820,6 +1934,15 @@ function Billing({
 
             <div className="billing-grid-wrapper">
               <table className="billing-table">
+                <colgroup>
+                  <col className="billing-col-product" />
+                  <col className="billing-col-number" />
+                  <col className="billing-col-number" />
+                  <col className="billing-col-number" />
+                  <col className="billing-col-number" />
+                  <col className="billing-col-number" />
+                </colgroup>
+
                 <thead>
                   <tr>
                     <th className="product-column">PRODUCT</th>
@@ -1834,9 +1957,19 @@ function Billing({
 
               <div className="billing-items-scroll">
                 <table className="billing-table">
+                  <colgroup>
+                    <col className="billing-col-product" />
+                    <col className="billing-col-number" />
+                    <col className="billing-col-number" />
+                    <col className="billing-col-number" />
+                    <col className="billing-col-number" />
+                    <col className="billing-col-number" />
+                  </colgroup>
+
                   <tbody>
                     {lines.map((line, index) => {
                       const selected = index === selectedIndex
+                      const deleted = line.deleted === true
 
                       const isBottomBlank =
                         !isReadOnly &&
@@ -1920,129 +2053,134 @@ function Billing({
                             )}
                           </td>
 
-                          <td className="number-cell">
-                            {line.isTemporary && selected && activeField === 'mrp' ? (
-                              <input
-                                ref={mrpInputRef}
-                                className="billing-number-input"
-                                type="text"
-                                inputMode="decimal"
-                                value={mrpInput}
-                                onFocus={() => {
-                                  setMrpInput(
-                                    line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString()
+                          {deleted ? (
+                            <td colSpan={4} className="billing-deleted-cell">
+                              - DELETED -
+                            </td>
+                          ) : (
+                            <>
+                              <td className="number-cell">
+                                {line.isTemporary && selected && activeField === 'mrp' ? (
+                                  <input
+                                    ref={mrpInputRef}
+                                    className="billing-number-input"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={mrpInput}
+                                    onFocus={() => {
+                                      setMrpInput(
+                                        line.mrpPaise === 0 ? '' : (line.mrpPaise / 100).toString()
+                                      )
+                                    }}
+                                    onChange={(event) => handleMrpChange(event.target.value)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Enter') {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        commitMrp()
+                                      }
+                                    }}
+                                  />
+                                ) : line.mrpPaise > 0 ? (
+                                  formatRupees(line.mrpPaise)
+                                ) : (
+                                  ''
+                                )}
+                              </td>
+
+                              <td className="number-cell">
+                                {line.productId !== null || line.isTemporary ? (
+                                  selected && activeField === 'quantity' ? (
+                                    <input
+                                      disabled={isReadOnly}
+                                      ref={quantityInputRef}
+                                      className="billing-number-input"
+                                      type="number"
+                                      min="0"
+                                      step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                                      value={line.quantity === 0 ? '' : line.quantity}
+                                      onChange={(event) => handleQuantityChange(event.target.value)}
+                                      onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                          event.preventDefault()
+                                          event.stopPropagation()
+                                          handleQuantityEnter()
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    line.quantity
                                   )
-                                }}
-                                onChange={(event) => handleMrpChange(event.target.value)}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter') {
-                                    event.preventDefault()
-                                    event.stopPropagation()
+                                ) : (
+                                  ''
+                                )}
+                              </td>
 
-                                    commitMrp()
-                                  }
-                                }}
-                              />
-                            ) : line.mrpPaise > 0 ? (
-                              formatRupees(line.mrpPaise)
-                            ) : (
-                              ''
-                            )}
-                          </td>
+                              <td className="number-cell">
+                                {line.productId !== null || line.isTemporary ? (
+                                  selected && activeField === 'free' ? (
+                                    <input
+                                      disabled={isReadOnly}
+                                      ref={freeInputRef}
+                                      className="billing-number-input"
+                                      type="number"
+                                      min="0"
+                                      step={line.quantityPrecision === 0 ? '1' : '0.001'}
+                                      value={line.freeQuantity === 0 ? '' : line.freeQuantity}
+                                      onChange={(event) => handleFreeChange(event.target.value)}
+                                      onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                          event.preventDefault()
+                                          event.stopPropagation()
+                                          handleFreeEnter()
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    line.freeQuantity
+                                  )
+                                ) : (
+                                  ''
+                                )}
+                              </td>
 
-                          <td className="number-cell">
-                            {line.productId !== null || line.isTemporary ? (
-                              selected && activeField === 'quantity' ? (
-                                <input
-                                  disabled={isReadOnly}
-                                  ref={quantityInputRef}
-                                  className="billing-number-input"
-                                  type="number"
-                                  min="0"
-                                  step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                                  value={line.quantity === 0 ? '' : line.quantity}
-                                  onChange={(event) => handleQuantityChange(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                      event.preventDefault()
-                                      event.stopPropagation()
-                                      handleQuantityEnter()
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                line.quantity
-                              )
-                            ) : (
-                              ''
-                            )}
-                          </td>
-
-                          <td className="number-cell">
-                            {line.productId !== null || line.isTemporary ? (
-                              selected && activeField === 'free' ? (
-                                <input
-                                  disabled={isReadOnly}
-                                  ref={freeInputRef}
-                                  className="billing-number-input"
-                                  type="number"
-                                  min="0"
-                                  step={line.quantityPrecision === 0 ? '1' : '0.001'}
-                                  value={line.freeQuantity === 0 ? '' : line.freeQuantity}
-                                  onChange={(event) => handleFreeChange(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                      event.preventDefault()
-                                      event.stopPropagation()
-                                      handleFreeEnter()
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                line.freeQuantity
-                              )
-                            ) : (
-                              ''
-                            )}
-                          </td>
-
-                          <td className="number-cell">
-                            {line.productId !== null || line.isTemporary ? (
-                              selected && activeField === 'rate' ? (
-                                <input
-                                  disabled={isReadOnly}
-                                  ref={rateInputRef}
-                                  className="billing-number-input"
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={rateInput}
-                                  onFocus={() => {
-                                    /*
-                                     * Load current rate into the editing
-                                     * value and select it.
-                                     */
-                                    setRateInput(
-                                      line.ratePaise === 0 ? '' : (line.ratePaise / 100).toString()
-                                    )
-                                  }}
-                                  onChange={(event) => handleRateChange(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                      event.preventDefault()
-                                      event.stopPropagation()
-                                      commitRate()
-                                    }
-                                  }}
-                                />
-                              ) : line.ratePaise > 0 ? (
-                                formatRupees(line.ratePaise)
-                              ) : (
-                                ''
-                              )
-                            ) : (
-                              ''
-                            )}
-                          </td>
+                              <td className="number-cell">
+                                {line.productId !== null || line.isTemporary ? (
+                                  selected && activeField === 'rate' ? (
+                                    <input
+                                      disabled={isReadOnly}
+                                      ref={rateInputRef}
+                                      className="billing-number-input"
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={rateInput}
+                                      onFocus={() => {
+                                        setRateInput(
+                                          line.ratePaise === 0
+                                            ? ''
+                                            : (line.ratePaise / 100).toString()
+                                        )
+                                      }}
+                                      onChange={(event) => handleRateChange(event.target.value)}
+                                      onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                          event.preventDefault()
+                                          event.stopPropagation()
+                                          commitRate()
+                                        }
+                                      }}
+                                    />
+                                  ) : line.ratePaise > 0 ? (
+                                    formatRupees(line.ratePaise)
+                                  ) : (
+                                    ''
+                                  )
+                                ) : (
+                                  ''
+                                )}
+                              </td>
+                            </>
+                          )}
 
                           <td className="number-cell amount-cell">
                             {line.amountPaise > 0 ? formatRupees(line.amountPaise) : ''}

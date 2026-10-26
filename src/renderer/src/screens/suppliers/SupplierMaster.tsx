@@ -337,7 +337,7 @@ function SupplierMaster({
               <th>Supplier</th>
               <th>Mobile</th>
               <th>GSTIN</th>
-              <th>Total Bill Amount</th>
+              <th>Total Bill</th>
               <th>Balance</th>
               <th>Status</th>
             </tr>
@@ -450,7 +450,7 @@ function SupplierMaster({
               </div>
 
               <div className="supplier-master-detail">
-                <span className="supplier-master-detail-label">Total Bill Amount</span>
+                <span className="supplier-master-detail-label">Total Bill</span>
 
                 <span className="supplier-master-detail-value">
                   {formatRupees(selectedSupplier.totalBillAmountPaise)}

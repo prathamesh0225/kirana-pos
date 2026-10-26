@@ -57,6 +57,7 @@ export type PurchaseDetail = {
   id: number
   invoiceNumber: string
   purchaseDate: string
+  createdAt: string
   supplierId: number
   supplierName: string
   subtotalPaise: number
@@ -733,6 +734,7 @@ export function getPurchaseById(purchaseId: number): PurchaseDetail | null {
           pi.id,
           pi.invoice_number,
           pi.purchase_date,
+          pi.created_at,
           pi.supplier_id,
           s.name AS supplier_name,
           pi.subtotal_paise,
@@ -753,6 +755,7 @@ export function getPurchaseById(purchaseId: number): PurchaseDetail | null {
         id: number
         invoice_number: string
         purchase_date: string
+        created_at: string
         supplier_id: number
         supplier_name: string
         subtotal_paise: number
@@ -815,6 +818,7 @@ export function getPurchaseById(purchaseId: number): PurchaseDetail | null {
     id: invoice.id,
     invoiceNumber: invoice.invoice_number,
     purchaseDate: invoice.purchase_date,
+    createdAt: invoice.created_at,
     supplierId: invoice.supplier_id,
     supplierName: invoice.supplier_name,
     subtotalPaise: invoice.subtotal_paise,
