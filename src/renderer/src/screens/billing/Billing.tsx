@@ -457,6 +457,9 @@ function Billing({
     setRateInput('')
     setBarcodeNotFound(false)
     setQuantityShortcutError('')
+    requestAnimationFrame(() => {
+      barcodeInputRef.current?.focus()
+    })
   }, [displaySession.id])
 
   useEffect(() => {
@@ -900,13 +903,17 @@ function Billing({
       const product = await window.kirana.products.getByBarcode(barcode)
 
       if (!product) {
-        addTemporaryGeneralItem(barcode)
+        setBarcodeNotFound(true)
+        setQuantityShortcutError('Product not found. Press Enter to open Item Master.')
         return
       }
 
       addProductToBottomRow(product)
     } catch (error) {
       console.error('Barcode lookup failed:', error)
+
+      setBarcodeNotFound(true)
+      setQuantityShortcutError('')
     }
   }
 
@@ -1026,7 +1033,7 @@ function Billing({
    * ---------------------------------------------------------
    */
 
-  function addTemporaryGeneralItem(barcode: string): void {
+  function addTemporaryGeneralItem(): void {
     if (isReadOnly) {
       return
     }
@@ -1039,7 +1046,7 @@ function Billing({
       productId: null,
       productName: 'General Item',
       isTemporary: true,
-      barcode,
+      barcode: null,
       quantityPrecision: 3,
       mrpPaise: 0,
       quantity: 1,
@@ -2000,12 +2007,28 @@ function Billing({
                                   value={barcodeInput}
                                   onChange={(event) => handleBarcodeChange(event.target.value)}
                                   onKeyDown={(event) => {
+                                    if (event.key === 'F3') {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+
+                                      addTemporaryGeneralItem()
+                                      return
+                                    }
+
                                     if (event.key !== 'Enter') {
                                       return
                                     }
 
                                     event.preventDefault()
                                     event.stopPropagation()
+
+                                    if (barcodeNotFound) {
+                                      setBarcodeNotFound(false)
+                                      setQuantityShortcutError('')
+                                      setBarcodeInput('')
+                                      openItemSelector()
+                                      return
+                                    }
 
                                     if (barcodeInput.trim()) {
                                       if (handleQuickQuantity(barcodeInput)) {
@@ -2208,11 +2231,11 @@ function Billing({
                 <div className="billing-error">{quantityShortcutError}</div>
               )}
 
-              {barcodeNotFound && (
+              {/* {barcodeNotFound && (
                 <div className="billing-not-found">
-                  Product not found — General Item created for this bill
+                  Product not found — Press Enter to open Item Master
                 </div>
-              )}
+              )} */}
             </div>
 
             {isReadOnly ? (
