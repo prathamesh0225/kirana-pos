@@ -15,6 +15,7 @@ export type EscPosReceiptLine = {
 export type EscPosReceipt = {
   billNumber: string
   saleDate: string
+  saleTime?: string
 
   customerName?: string
   customerMobile?: string
@@ -78,7 +79,7 @@ function truncateItemName(name: string, maxLength: number): string {
   return name.length > maxLength ? name.slice(0, maxLength) : name
 }
 
-function makeItemLine(line: EscPosReceiptLine): string {
+function makeItemLine(line: EscPosReceiptLine, itemNumber: number): string {
   /*
    * 48-character layout:
    *
@@ -97,7 +98,7 @@ function makeItemLine(line: EscPosReceiptLine): string {
   const rateWidth = 7
   const amountWidth = 7
 
-  const item = truncateItemName(line.productName, itemWidth)
+  const item = truncateItemName(`${itemNumber}. ${line.productName}`, itemWidth)
 
   const mrp = formatRupees(line.mrpPaise)
 
@@ -123,6 +124,16 @@ function makeCompactTotalLine(label: string, amountPaise: number): string {
   const labelWidth = 14
 
   return padRight(label, labelWidth) + amount
+}
+
+function makeSmallItemQuantityLine(quantity: number): string {
+  return (
+    '\x1b\x45\x00' + // Bold OFF
+    '\x1b\x4d\x01' + // Font B (smaller)
+    `ITEM QTY : ${formatQuantity(quantity)}` +
+    '\x1b\x4d\x00' + // Back to Font A
+    '\x1b\x45\x01' // Bold ON
+  )
 }
 
 function mergeReceiptLines(lines: EscPosReceiptLine[]): EscPosReceiptLine[] {
@@ -186,6 +197,12 @@ function buildReceiptText(receipt: EscPosReceipt): string {
 
   lines.push(billInfo + ' '.repeat(billInfoSpaces) + dateInfo)
 
+  if (receipt.saleTime) {
+    const timeSpaces = Math.max(1, RECEIPT_WIDTH - receipt.saleTime.length)
+
+    lines.push(' '.repeat(timeSpaces) + receipt.saleTime)
+  }
+
   if (receipt.customerName) {
     lines.push(`Customer: ${receipt.customerName}`)
   }
@@ -194,7 +211,7 @@ function buildReceiptText(receipt: EscPosReceipt): string {
     lines.push(`Mobile: ${receipt.customerMobile}`)
   }
 
-  lines.push('')
+  lines.push('-'.repeat(RECEIPT_WIDTH))
 
   // ------------------------------------------------
   // ITEMS
@@ -212,11 +229,16 @@ function buildReceiptText(receipt: EscPosReceipt): string {
 
   const printableLines = mergeReceiptLines(receipt.lines)
 
-  for (const line of printableLines) {
-    lines.push(makeItemLine(line))
-  }
+  printableLines.forEach((line, index) => {
+    lines.push(makeItemLine(line, index + 1))
+  })
 
   lines.push('-'.repeat(RECEIPT_WIDTH))
+
+  const totalItemQuantity = printableLines.reduce((total, line) => total + line.quantity, 0)
+
+  lines.push(makeSmallItemQuantityLine(totalItemQuantity))
+  lines.push('')
 
   // ------------------------------------------------
   // TOTALS

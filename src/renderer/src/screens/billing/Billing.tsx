@@ -305,6 +305,11 @@ function Billing({
       const receipt = {
         billNumber: displaySession.billNumber,
         saleDate: new Date().toLocaleDateString('en-IN'),
+        saleTime: new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
         customerName: displaySession.customerName || undefined,
         customerMobile: displaySession.customerMobile || undefined,
 
