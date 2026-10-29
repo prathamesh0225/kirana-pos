@@ -13,6 +13,8 @@ import { updateSale, type UpdateSaleInput } from '../services/sale-update.servic
 import { getAvailableBatchesForProduct } from '../repositories/purchase.repository'
 import { getBillingContextData } from '../repositories/billing-context.repository'
 
+import { getSalesReport } from '../repositories/sales-report.repository'
+
 export function registerBillingIpc(): void {
   ipcMain.handle('billing:getSlots', () => {
     const db = getDatabase()
@@ -87,3 +89,11 @@ ipcMain.handle('billing:getAvailableBatches', (_event, productId: number) => {
 
   return getAvailableBatchesForProduct(productId)
 })
+
+ipcMain.handle(
+  'billing:getSalesReport',
+  (_event, filters: { fromDate: string | null; toDate: string | null }) => {
+    const db = getDatabase()
+    return getSalesReport(db, filters)
+  }
+)

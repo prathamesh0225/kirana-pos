@@ -135,7 +135,10 @@ const api = {
       }
     }) => ipcRenderer.invoke('billing:updateSale', input),
     //window.kirana.billing.repairCompletedSlot()
-    repairCompletedSlot: () => ipcRenderer.invoke('billing:repairCompletedSlot')
+    repairCompletedSlot: () => ipcRenderer.invoke('billing:repairCompletedSlot'),
+
+    getSalesReport: (filters: { fromDate: string | null; toDate: string | null }) =>
+      ipcRenderer.invoke('billing:getSalesReport', filters)
   },
 
   purchase: {

@@ -12,6 +12,7 @@ import { Settings } from './screens/settings/Settings'
 import { QuitBackupScreen } from './components/quit-backup/QuitBackupScreen'
 import PurchaseEntry from './screens/purchases/PurchaseEntry'
 import PurchaseHistory from './screens/purchases/PurchaseHistory'
+import SalesReport from './screens/reports/SalesReport'
 
 type HistoricalBillMode = 'view' | 'modify'
 
@@ -55,6 +56,9 @@ type Screen =
     }
   | {
       type: 'purchase-history'
+    }
+  | {
+      type: 'sales-report'
     }
 
 function createEmptyBillingLine(): BillingLine {
@@ -278,6 +282,10 @@ function App(): React.JSX.Element {
         setScreen({
           type: 'purchase-entry'
         })
+        break
+
+      case 'sales-report':
+        setScreen({ type: 'sales-report' })
         break
 
       default:
@@ -807,6 +815,25 @@ function App(): React.JSX.Element {
           setScreen({
             type: 'dashboard'
           })
+        }}
+      />
+    )
+  }
+
+  /*
+   * =========================================================
+   * SALES REPORT
+   * =========================================================
+   */
+
+  if (screen.type === 'sales-report') {
+    return (
+      <SalesReport
+        onBack={() => {
+          setScreen({ type: 'dashboard' })
+        }}
+        onOpenBill={(saleId) => {
+          handleOpenHistoricalBill(saleId)
         }}
       />
     )

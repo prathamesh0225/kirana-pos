@@ -309,6 +309,34 @@ declare global {
         }>
 
         repairCompletedSlot: () => Promise<string>
+
+        getSalesReport: (filters: { fromDate: string | null; toDate: string | null }) => Promise<{
+          daily: Array<{
+            date: string
+            firstBillNumber: string
+            lastBillNumber: string
+            billCount: number
+            salesPaise: number
+          }>
+          bills: Array<{
+            id: number
+            billNumber: string
+            saleDate: string
+            status: string
+            totalPaise: number
+            refundedPaise: number
+            netPaise: number
+          }>
+          products: Array<{
+            productName: string
+            quantity: number
+            salesPaise: number
+          }>
+          payments: Array<{
+            paymentMethod: string
+            amountPaise: number
+          }>
+        }>
       }
 
       purchase: {
