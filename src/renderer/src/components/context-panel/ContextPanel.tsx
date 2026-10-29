@@ -138,7 +138,11 @@ function formatHistoryDateTime(value: string | undefined): {
   }
 }
 
-export default function ContextPanel({ mode, saleId, purchaseId }: ContextPanelProps): JSX.Element {
+export default function ContextPanel({
+  mode,
+  saleId,
+  purchaseId
+}: ContextPanelProps): React.ReactElement {
   const [data, setData] = useState<BillingContextData | null>(null)
 
   const [historyData, setHistoryData] = useState<HistoryContextData | null>(null)
@@ -530,7 +534,12 @@ export default function ContextPanel({ mode, saleId, purchaseId }: ContextPanelP
             <section className="context-section">
               <div className="context-section-header">
                 <div>
-                  <div className="context-section-title urgent">URGENT STOCK</div>
+                  <div className="context-section-title urgent">
+                    URGENT STOCK
+                    <span className="context-section-count">
+                      Items: {data?.urgentStock.length ?? 0}
+                    </span>
+                  </div>
 
                   <div className="context-section-hint">Low stock + high demand</div>
                 </div>
@@ -604,7 +613,12 @@ export default function ContextPanel({ mode, saleId, purchaseId }: ContextPanelP
             <section className="context-section">
               <div className="context-section-header">
                 <div>
-                  <div className="context-section-title expiry">EXPIRING STOCK</div>
+                  <div className="context-section-title expiry">
+                    EXPIRING STOCK
+                    <span className="context-section-count">
+                      Items: {data?.expiringStock.length ?? 0}
+                    </span>
+                  </div>
 
                   <div className="context-section-hint">High stock • Next 30 days</div>
                 </div>

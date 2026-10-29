@@ -71,12 +71,41 @@ export function findProductByBarcode(barcode: string): ProductRecord | undefined
     .prepare(
       `
       ${getProductSelectSql()}
-      WHERE barcode = ?
-        AND is_active = 1
+      WHERE TRIM(barcode) COLLATE NOCASE = TRIM(?)
+      AND is_active = 1
       LIMIT 1
     `
     )
     .get(barcode) as ProductRecord | undefined
+}
+
+export function productBarcodeExists(barcode: string, excludeProductId?: number): boolean {
+  const db = getDatabase()
+
+  const query =
+    excludeProductId === undefined
+      ? `
+        SELECT id
+        FROM products
+        WHERE barcode IS NOT NULL
+          AND TRIM(barcode) COLLATE NOCASE = TRIM(?)
+        LIMIT 1
+      `
+      : `
+        SELECT id
+        FROM products
+        WHERE barcode IS NOT NULL
+          AND TRIM(barcode) COLLATE NOCASE = TRIM(?)
+          AND id != ?
+        LIMIT 1
+      `
+
+  const result =
+    excludeProductId === undefined
+      ? db.prepare(query).get(barcode)
+      : db.prepare(query).get(barcode, excludeProductId)
+
+  return result !== undefined
 }
 
 function generateBarcodeCandidate(): string {

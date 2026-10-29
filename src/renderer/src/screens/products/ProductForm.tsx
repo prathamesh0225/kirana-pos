@@ -2,19 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import ConfirmDialog from '../../components/confirm-dialog/ConfirmDialog'
 import './product-form.css'
 
-const PRODUCT_UNITS = ['PCS', 'KG', 'GRAM', 'LITRE', 'ML', 'BOX', 'PACK', 'DOZEN'] as const
+const PRODUCT_UNITS = ['PCS', 'KG'] as const
 
 type ProductUnit = (typeof PRODUCT_UNITS)[number]
 
 const DEFAULT_QUANTITY_PRECISION: Record<ProductUnit, number> = {
-  PCS: 0,
-  KG: 3,
-  GRAM: 0,
-  LITRE: 3,
-  ML: 0,
-  BOX: 0,
-  PACK: 0,
-  DOZEN: 0
+  PCS: 3,
+  KG: 3
 }
 
 type ProductFormProps = {

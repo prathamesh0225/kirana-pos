@@ -5,6 +5,7 @@ import {
   disableProduct,
   enableProduct,
   findProductByBarcode,
+  productBarcodeExists,
   findProductByName,
   findProductById,
   findProductByIdAnyStatus,
@@ -23,24 +24,18 @@ import { nowIso } from '../utils/dates'
 
 import { requireNonEmpty, requireNonNegative, requirePositive } from '../utils/validation'
 
-export const PRODUCT_UNITS = ['PCS', 'KG', 'GRAM', 'LITRE', 'ML', 'BOX', 'PACK', 'DOZEN'] as const
-
-export type ProductUnit = (typeof PRODUCT_UNITS)[number]
-
 export type StockAdjustmentData = {
   quantity: number
   reason: string
 }
 
+export const PRODUCT_UNITS = ['PCS', 'KG'] as const
+
+export type ProductUnit = (typeof PRODUCT_UNITS)[number]
+
 const DEFAULT_QUANTITY_PRECISION: Record<ProductUnit, number> = {
-  PCS: 0,
-  KG: 3,
-  GRAM: 0,
-  LITRE: 3,
-  ML: 0,
-  BOX: 0,
-  PACK: 0,
-  DOZEN: 0
+  PCS: 3,
+  KG: 3
 }
 
 export function generateProductBarcode(): string {
@@ -201,12 +196,8 @@ export function addProduct(data: CreateProductData): ProductRecord {
 
   requireValidQuantity(stockQuantity, validated.quantityPrecision, 'Stock quantity')
 
-  if (validated.barcode) {
-    const existingProduct = findProductByBarcode(validated.barcode)
-
-    if (existingProduct) {
-      throw new Error('A product with this barcode already exists')
-    }
+  if (validated.barcode && productBarcodeExists(validated.barcode)) {
+    throw new Error('A product with this barcode already exists')
   }
 
   return createProduct(
@@ -253,12 +244,8 @@ export function editProduct(productId: number, data: UpdateProductData): Product
     )
   }
 
-  if (validated.barcode) {
-    const productWithBarcode = findProductByBarcode(validated.barcode)
-
-    if (productWithBarcode && productWithBarcode.id !== productId) {
-      throw new Error('A product with this barcode already exists')
-    }
+  if (validated.barcode && productBarcodeExists(validated.barcode, productId)) {
+    throw new Error('A product with this barcode already exists')
   }
 
   return updateProduct(productId, validated, nowIso())

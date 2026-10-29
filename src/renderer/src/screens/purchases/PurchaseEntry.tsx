@@ -512,7 +512,7 @@ export default function PurchaseEntry({
           productName: line.productName,
           barcode: line.barcode,
 
-          quantityPrecision: 0,
+          quantityPrecision: 3,
 
           oldMrpPaise: line.mrpPaise,
           oldPurchaseRatePaise: line.purchaseRatePaise,

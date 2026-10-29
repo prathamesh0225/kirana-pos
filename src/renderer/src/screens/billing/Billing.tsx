@@ -19,6 +19,8 @@ type BillingProps = {
   onBillCompleted: (billNumber: string) => void
   onOpenBillHistory: () => void
 
+  focusRestoreRequest?: number
+
   mode?: BillingMode
   saleId?: number
   onModifyMode?: () => void
@@ -132,6 +134,7 @@ function Billing({
   onNewBill,
   onBillCompleted,
   onOpenBillHistory,
+  focusRestoreRequest = 0,
   mode = 'active',
   saleId,
   onModifyMode,
@@ -454,6 +457,26 @@ function Billing({
    */
 
   useEffect(() => {
+    if (focusRestoreRequest === 0 || isReadOnly || showPayment) {
+      return
+    }
+
+    const bottomIndex = Math.max(lines.length - 1, 0)
+
+    setSelectedIndex(bottomIndex)
+    setActiveField('product')
+    setBarcodeInput('')
+    setBarcodeNotFound(false)
+    setQuantityShortcutError('')
+    setEditingTemporaryProductName(false)
+    setRateInput('')
+
+    requestAnimationFrame(() => {
+      barcodeInputRef.current?.focus()
+    })
+  }, [focusRestoreRequest, isReadOnly, lines.length, showPayment])
+
+  useEffect(() => {
     const bottomIndex = Math.max(lines.length - 1, 0)
 
     setSelectedIndex(bottomIndex)
@@ -609,13 +632,27 @@ function Billing({
           document.activeElement.blur()
         }
 
-        const lastIndex = lines.length - 1
+        // const lastIndex = lines.length - 1
 
-        setSelectedIndex(lastIndex)
+        // setSelectedIndex(lastIndex)
+        // setActiveField('product')
+        // setBarcodeInput('')
+        // setBarcodeNotFound(false)
+        // setEditingTemporaryProductName(false)
+
+        const bottomIndex = Math.max(lines.length - 1, 0)
+
+        setSelectedIndex(bottomIndex)
         setActiveField('product')
         setBarcodeInput('')
         setBarcodeNotFound(false)
+        setQuantityShortcutError('')
         setEditingTemporaryProductName(false)
+        setRateInput('')
+
+        requestAnimationFrame(() => {
+          barcodeInputRef.current?.focus()
+        })
 
         return
       }
@@ -898,7 +935,7 @@ function Billing({
       return
     }
 
-    const barcode = barcodeInput.trim()
+    const barcode = barcodeInput.trim().toLowerCase()
 
     if (!barcode) {
       return
@@ -946,7 +983,7 @@ function Billing({
       expiryDate: null,
       batchQuantity: batch?.quantity ?? product.stock_quantity,
 
-      quantityPrecision: product.quantity_precision,
+      quantityPrecision: 3,
 
       mrpPaise,
       quantity: 1,
@@ -1340,23 +1377,13 @@ function Billing({
       return true
     }
 
-    const precision = previousLine.quantityPrecision
-
-    if (precision === 0 && !Number.isInteger(quantity)) {
-      setQuantityShortcutError(
-        `${previousLine.productName} uses PCS and does not support decimal quantity`
-      )
-      setBarcodeInput('')
-      return true
-    }
+    const precision = 3
 
     const factor = 10 ** precision
     const roundedQuantity = Math.round(quantity * factor) / factor
 
     if (roundedQuantity !== quantity) {
-      setQuantityShortcutError(
-        `Quantity supports up to ${precision} decimal place${precision === 1 ? '' : 's'}`
-      )
+      setQuantityShortcutError(`Quantity supports up to ${precision} decimal places`)
       setBarcodeInput('')
       return true
     }
@@ -2288,19 +2315,21 @@ function Billing({
             ) : mode === 'modify' ? (
               <div className="billing-footer">
                 <span>F2 Add Item</span>
+                <span>F3 General Item</span>
+                <span>F6 Save</span>
                 <span>Enter Add</span>
                 <span>Delete Remove</span>
-                <span>F6 Save</span>
                 <span>Esc Back</span>
               </div>
             ) : (
               <div className="billing-footer">
                 <span>F1 Back</span>
                 <span>F2 Add Item</span>
-                <span>Enter Item Master</span>
-                <span>Delete Remove</span>
+                <span>F3 General Item</span>
                 <span>F6 Payment</span>
                 <span>F9 Bill History</span>
+                <span>Enter Item Master</span>
+                <span>Delete Remove</span>
                 <span>Ctrl+N New Bill</span>
                 <span>← Edit Bill No.</span>
               </div>
@@ -2329,6 +2358,20 @@ function Billing({
               totalPaise={totalPaise}
               onBack={() => {
                 setShowPayment(false)
+
+                const lastIndex = lines.length - 1
+
+                setSelectedIndex(lastIndex)
+                setActiveField('product')
+                setBarcodeInput('')
+                setBarcodeNotFound(false)
+                setQuantityShortcutError('')
+                setEditingTemporaryProductName(false)
+                setRateInput('')
+
+                requestAnimationFrame(() => {
+                  barcodeInputRef.current?.focus()
+                })
               }}
               onComplete={(payment: PaymentResult) => {
                 setPendingPayment(payment)

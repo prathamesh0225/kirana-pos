@@ -114,6 +114,7 @@ function App(): React.JSX.Element {
   )
 
   const [showExitBillingConfirm, setShowExitBillingConfirm] = useState(false)
+  const [billingFocusRestoreRequest, setBillingFocusRestoreRequest] = useState(0)
 
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
 
@@ -411,6 +412,7 @@ function App(): React.JSX.Element {
           session={activeBillingSession!}
           onSessionChange={updateActiveBillingSession}
           mode="active"
+          focusRestoreRequest={billingFocusRestoreRequest}
           onNewBill={handleNewBill}
           onBillCompleted={async () => {
             const newBillNumber =
@@ -470,6 +472,7 @@ function App(): React.JSX.Element {
             }}
             onCancel={() => {
               setShowExitBillingConfirm(false)
+              setBillingFocusRestoreRequest((request) => request + 1)
             }}
           />
         )}

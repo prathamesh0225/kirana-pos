@@ -70,8 +70,6 @@ export function getBillingContextData(): BillingContextData {
         sold_quantity DESC,
         p.stock_quantity ASC,
         p.name COLLATE NOCASE ASC
-
-      LIMIT 15
       `
     )
     .all() as Array<{
@@ -214,8 +212,6 @@ export function getBillingContextData(): BillingContextData {
       batch_quantity DESC,
       expiry_date ASC,
       p.name COLLATE NOCASE ASC
-
-    LIMIT 15
     `
     )
     .all() as Array<{
