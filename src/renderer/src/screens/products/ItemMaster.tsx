@@ -19,6 +19,7 @@ import ContextPanel from '../../components/context-panel/ContextPanel'
 
 type ItemMasterProps = {
   mode?: 'manage' | 'select'
+  initialFilter?: 'all' | 'low-stock'
   onBack: () => void
   onAddItem: () => void
   onEditItem: (productId: number) => void
@@ -48,6 +49,7 @@ const ITEM_MASTER_RETURN_PRODUCT_KEY = 'item-master-return-product-id'
 
 function ItemMaster({
   mode = 'manage',
+  initialFilter = 'all',
   onBack,
   onAddItem,
   onEditItem,
@@ -64,6 +66,12 @@ function ItemMaster({
   const [statusChanging, setStatusChanging] = useState(false)
 
   const [statusFilter, setStatusFilter] = useState<'active' | 'disabled' | 'all'>('active')
+
+  const [stockFilter, setStockFilter] = useState<'all' | 'low-stock' | 'below' | 'above'>(
+    initialFilter
+  )
+
+  const [stockThreshold, setStockThreshold] = useState('0')
 
   const [stockAdjustmentProduct, setStockAdjustmentProduct] = useState<ProductRecord | null>(null)
 
@@ -84,9 +92,12 @@ function ItemMaster({
 
   const searchRef = useRef<HTMLInputElement>(null)
 
+  const stockThresholdRef = useRef<HTMLInputElement>(null)
+
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
 
   const restoreScrollOnReturnRef = useRef(false)
+
   /*
    * Remember the product before opening another
    * Item Master operation.
@@ -141,11 +152,38 @@ function ItemMaster({
   }, [statusFilter])
 
   /*
+   * Filter the products displayed in the table.
+   *
+   * Keyboard navigation and shortcuts must use
+   * this same list so the selected index always
+   * matches the visible row.
+   */
+  const visibleProducts = products.filter((product) => {
+    if (stockFilter === 'low-stock') {
+      return product.stock_quantity <= product.low_stock_level
+    }
+
+    const threshold = Number(stockThreshold)
+
+    if (stockFilter === 'below') {
+      return stockThreshold.trim() !== '' && product.stock_quantity <= threshold
+    }
+
+    if (stockFilter === 'above') {
+      return stockThreshold.trim() !== '' && product.stock_quantity > threshold
+    }
+
+    return true
+  })
+
+  const selectedProduct = visibleProducts[selectedIndex]
+
+  /*
    * Restore the exact product after returning from
    * Edit / Stock Adjustment / History / etc.
    *
-   * We use product ID instead of row index because
-   * the product's position can change after reload.
+   * Use visibleProducts so the selected index
+   * matches the displayed table.
    */
   useEffect(() => {
     if (loading || products.length === 0) {
@@ -158,14 +196,18 @@ function ItemMaster({
       return
     }
 
-    const rememberedIndex = products.findIndex((product) => product.id === rememberedProductId)
+    const rememberedIndex = visibleProducts.findIndex(
+      (product) => product.id === rememberedProductId
+    )
 
     if (rememberedIndex !== -1) {
       setSelectedIndex(rememberedIndex)
+    } else {
+      setSelectedIndex(0)
     }
 
     clearRememberedProduct()
-  }, [products, loading])
+  }, [products, visibleProducts, loading])
 
   /*
    * Existing search behavior.
@@ -192,7 +234,7 @@ function ItemMaster({
    * reload before we calculate its position.
    */
   useLayoutEffect(() => {
-    if (loading || products.length === 0) {
+    if (loading || visibleProducts.length === 0) {
       return
     }
 
@@ -242,7 +284,7 @@ function ItemMaster({
     return (): void => {
       cancelAnimationFrame(frame)
     }
-  }, [selectedIndex, products, loading])
+  }, [selectedIndex, visibleProducts, loading])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
@@ -270,7 +312,7 @@ function ItemMaster({
       if (event.key === 'F3') {
         event.preventDefault()
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
           rememberSelectedProduct(selectedProduct.id)
@@ -288,7 +330,7 @@ function ItemMaster({
           return
         }
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
           rememberSelectedProduct(selectedProduct.id)
@@ -306,7 +348,7 @@ function ItemMaster({
       if (event.key === 'F5' && mode === 'manage') {
         event.preventDefault()
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (!selectedProduct) {
           return
@@ -324,7 +366,7 @@ function ItemMaster({
       if (event.key === 'Enter' && onSelectItem) {
         event.preventDefault()
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
           onSelectItem(selectedProduct)
@@ -357,11 +399,11 @@ function ItemMaster({
         event.preventDefault()
 
         setSelectedIndex((current) => {
-          if (products.length === 0) {
+          if (visibleProducts.length === 0) {
             return 0
           }
 
-          return Math.min(current + 1, products.length - 1)
+          return Math.min(current + 1, visibleProducts.length - 1)
         })
 
         return
@@ -378,7 +420,7 @@ function ItemMaster({
       if (event.key === 'Delete') {
         event.preventDefault()
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
           /*
@@ -394,12 +436,15 @@ function ItemMaster({
       }
 
       if (event.key === 'Backspace') {
+        const target = event.target
+
+        // Allow normal editing inside input fields and textareas.
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+          return
+        }
+
         event.preventDefault()
 
-        /*
-         * Clear the entire search box with one
-         * Backspace press.
-         */
         if (searchTerm) {
           setSearchTerm('')
           setSearchError('')
@@ -416,7 +461,7 @@ function ItemMaster({
       if ((event.key === '+' || event.key === '=') && mode === 'manage') {
         event.preventDefault()
 
-        const selectedProduct = products[selectedIndex]
+        const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
           rememberSelectedProduct(selectedProduct.id)
@@ -439,7 +484,7 @@ function ItemMaster({
     onBack,
     onEditItem,
     onSelectItem,
-    products,
+    visibleProducts,
     searchTerm,
     selectedIndex,
     stockAdjustmentProduct,
@@ -470,10 +515,13 @@ function ItemMaster({
     }
 
     /*
-     * Find the FIRST matching product.
+     * Find the FIRST matching product within the
+     * currently visible list.
      * This becomes the default selected product.
      */
-    const matchingIndex = products.findIndex((product) => productMatchesSearch(product, query))
+    const matchingIndex = visibleProducts.findIndex((product) =>
+      productMatchesSearch(product, query)
+    )
 
     /*
      * Invalid next character:
@@ -539,8 +587,6 @@ function ItemMaster({
     )
   }
 
-  const selectedProduct = products[selectedIndex]
-
   return (
     <div className="item-master-layout">
       <div className="item-master">
@@ -553,7 +599,6 @@ function ItemMaster({
             <span>F3 Edit</span>
             <span>F4 Stock Adj</span>
             <span>F5 History</span>
-            <span>F6 Low Stock</span>
             <span>Enter No Action</span>
             <span>Esc Back</span>
             <span>DELETE Enable/Disable</span>
@@ -597,17 +642,19 @@ function ItemMaster({
                 </tr>
               )}
 
-              {!loading && !error && products.length === 0 && (
+              {!loading && !error && visibleProducts.length === 0 && (
                 <tr>
                   <td colSpan={8} className="table-message">
-                    No products found
+                    {stockFilter === 'low-stock'
+                      ? 'No low-stock products found'
+                      : 'No products found'}
                   </td>
                 </tr>
               )}
 
               {!loading &&
                 !error &&
-                products.map((product, index) => {
+                visibleProducts.map((product, index) => {
                   const selected = index === selectedIndex
 
                   const searchMatches =
@@ -681,7 +728,51 @@ function ItemMaster({
             <option value="all">All</option>
           </select>
 
-          <span className="item-count">{products.length} items</span>
+          <label htmlFor="stock-filter">Stock:</label>
+
+          <select
+            id="stock-filter"
+            value={stockFilter}
+            onChange={(event) => {
+              const nextFilter = event.target.value as 'all' | 'low-stock' | 'below' | 'above'
+
+              setStockFilter(nextFilter)
+              setSelectedIndex(0)
+
+              if (nextFilter === 'below' || nextFilter === 'above') {
+                requestAnimationFrame(() => {
+                  stockThresholdRef.current?.focus()
+                  stockThresholdRef.current?.select()
+                })
+              }
+            }}
+          >
+            <option value="all">All Items</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="below">Below or Equal Quantity</option>
+            <option value="above">Above</option>
+          </select>
+
+          {(stockFilter === 'below' || stockFilter === 'above') && (
+            <>
+              <label htmlFor="stock-threshold">Qty:</label>
+
+              <input
+                ref={stockThresholdRef}
+                id="stock-threshold"
+                type="number"
+                min="0"
+                step="0.001"
+                value={stockThreshold}
+                onChange={(event) => {
+                  setStockThreshold(event.target.value)
+                  setSelectedIndex(0)
+                }}
+              />
+            </>
+          )}
+
+          <span className="item-count">{visibleProducts.length} items</span>
         </div>
 
         <div className="item-master-footer">
@@ -690,7 +781,6 @@ function ItemMaster({
           <span>F3 Edit</span>
           <span>F4 Stock Adj</span>
           <span>F5 History</span>
-          <span>F6 Low Stock</span>
           <span>Enter No Action</span>
           <span>Esc Back</span>
           <span>DELETE Enable/Disable</span>
@@ -772,15 +862,13 @@ function ItemMaster({
             message={
               statusChangeProduct.is_active ? (
                 <>
-                  Disable <strong>{statusChangeProduct.name}</strong>
-                  ?
+                  Disable <strong>{statusChangeProduct.name}</strong>?
                   <br />
                   This product will no longer appear in normal billing and product search.
                 </>
               ) : (
                 <>
-                  Enable <strong>{statusChangeProduct.name}</strong>
-                  ?
+                  Enable <strong>{statusChangeProduct.name}</strong>?
                   <br />
                   This product will become available in normal billing and product search.
                 </>
@@ -850,6 +938,7 @@ function ItemMaster({
           }}
         />
       </div>
+
       <ContextPanel mode="blank" />
     </div>
   )

@@ -28,6 +28,7 @@ type Screen =
   | {
       type: 'item-master'
       returnTo: 'dashboard' | 'billing'
+      initialFilter?: 'all' | 'low-stock'
     }
   | {
       type: 'add-item'
@@ -257,6 +258,14 @@ function App(): React.JSX.Element {
         setScreen({ type: 'item-master', returnTo: 'dashboard' })
         break
 
+      case 'low-stock':
+        setScreen({
+          type: 'item-master',
+          returnTo: 'dashboard',
+          initialFilter: 'low-stock'
+        })
+        break
+
       case 'settings':
         setScreen({
           type: 'settings'
@@ -379,6 +388,13 @@ function App(): React.JSX.Element {
             onOpenSettings={() => {
               setScreen({
                 type: 'settings'
+              })
+            }}
+            onOpenLowStock={() => {
+              setScreen({
+                type: 'item-master',
+                returnTo: 'dashboard',
+                initialFilter: 'low-stock'
               })
             }}
           />
@@ -803,6 +819,7 @@ function App(): React.JSX.Element {
   return (
     <ItemMaster
       mode="manage"
+      initialFilter={screen.initialFilter}
       onBack={() => {
         setScreen({
           type: screen.returnTo

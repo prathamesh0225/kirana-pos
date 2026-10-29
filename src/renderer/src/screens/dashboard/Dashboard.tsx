@@ -11,15 +11,22 @@ type DashboardProps = {
   onOpenItems: () => void
   onOpenBillHistory: () => void
   onOpenSettings: () => void
+  onOpenLowStock: () => void
 }
 
-export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: DashboardProps) {
+export function Dashboard({
+  onOpenBilling,
+  onOpenItems,
+  onOpenBillHistory,
+  onOpenLowStock
+}: DashboardProps) {
   const [salesSummary, setSalesSummary] = useState<DashboardSalesSummary>({
     totalSalesPaise: 0,
     billsToday: 0
   })
 
   const [isLoading, setIsLoading] = useState(true)
+  const [lowStockCount, setLowStockCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -41,6 +48,32 @@ export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: Das
     }
 
     void loadDashboardData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadLowStockCount(): Promise<void> {
+      try {
+        const products = await window.kirana.products.list(10000, 'active')
+
+        const count = products.filter(
+          (product) => product.stock_quantity <= product.low_stock_level
+        ).length
+
+        if (!cancelled) {
+          setLowStockCount(count)
+        }
+      } catch (error) {
+        console.error('Failed to load low-stock count:', error)
+      }
+    }
+
+    void loadLowStockCount()
 
     return () => {
       cancelled = true
@@ -105,11 +138,15 @@ export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: Das
           <div className="dashboard-stat-note">Completed bills</div>
         </div>
 
-        <div className="dashboard-stat dashboard-stat-warning">
+        <button
+          type="button"
+          className="dashboard-stat dashboard-stat-warning"
+          onClick={onOpenLowStock}
+        >
           <div className="dashboard-stat-label">LOW STOCK</div>
-          <div className="dashboard-stat-value">0</div>
+          <div className="dashboard-stat-value">{lowStockCount}</div>
           <div className="dashboard-stat-note">Items need attention</div>
-        </div>
+        </button>
       </div>
 
       <div className="dashboard-grid">
@@ -124,15 +161,30 @@ export function Dashboard({ onOpenBilling, onOpenItems, onOpenBillHistory }: Das
           <div className="dashboard-empty">No bills today.</div>
         </section>
 
-        <section className="dashboard-panel">
+        <section
+          className="dashboard-panel"
+          onClick={onOpenLowStock}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onOpenLowStock()
+            }
+          }}
+        >
           <div className="dashboard-panel-header">
             <div>
-              <h2>Low Stock</h2>
-              <span>Items below their stock level</span>
+              <h2>Low Stock ({lowStockCount})</h2>
+              <span>Click to view low-stock products</span>
             </div>
           </div>
 
-          <div className="dashboard-empty">No low-stock items.</div>
+          <div className="dashboard-empty">
+            {lowStockCount === 0
+              ? 'No low-stock items.'
+              : `${lowStockCount} items need attention. Click to view.`}
+          </div>
         </section>
       </div>
 

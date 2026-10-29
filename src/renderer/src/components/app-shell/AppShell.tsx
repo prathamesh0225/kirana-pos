@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode, ReactElement } from 'react'
 import './app-shell.css'
@@ -24,8 +23,8 @@ const menuGroups = [
     title: 'INVENTORY',
     items: [
       { id: 'purchase', label: 'Purchase F4', icon: '＋' },
-      { id: 'stock', label: 'Stock', icon: '▦' },
-      { id: 'low-stock', label: 'Low Stock', icon: '!' }
+      { id: 'customer-manager', label: 'Customer Manager', icon: '▦' },
+      { id: 'low-stock', label: 'Low Stock F6', icon: '!' }
     ]
   },
   {
@@ -97,11 +96,23 @@ export function AppShell({
         return
       }
 
-      const currentIndex = menuItems.findIndex(
-        (item) => item.id === keyboardSelectedMenu
-      )
+      const currentIndex = menuItems.findIndex((item) => item.id === keyboardSelectedMenu)
 
       const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0
+
+      // F4: Open Purchase Entry
+      if (event.key === 'F4') {
+        event.preventDefault()
+        onMenuSelect('purchase')
+        return
+      }
+
+      // F6: Open Low Stock
+      if (event.key === 'F6') {
+        event.preventDefault()
+        onMenuSelect('low-stock')
+        return
+      }
 
       /*
        * ARROW DOWN
@@ -112,10 +123,7 @@ export function AppShell({
       if (event.key === 'ArrowDown') {
         event.preventDefault()
 
-        const nextIndex = Math.min(
-          safeCurrentIndex + 1,
-          menuItems.length - 1
-        )
+        const nextIndex = Math.min(safeCurrentIndex + 1, menuItems.length - 1)
 
         const nextItem = menuItems[nextIndex]
 
@@ -135,10 +143,7 @@ export function AppShell({
       if (event.key === 'ArrowUp') {
         event.preventDefault()
 
-        const previousIndex = Math.max(
-          safeCurrentIndex - 1,
-          0
-        )
+        const previousIndex = Math.max(safeCurrentIndex - 1, 0)
 
         const previousItem = menuItems[previousIndex]
 
@@ -217,14 +222,11 @@ export function AppShell({
         <nav className="sidebar-nav">
           {menuGroups.map((group) => (
             <div className="sidebar-group" key={group.title}>
-              <div className="sidebar-group-title">
-                {group.title}
-              </div>
+              <div className="sidebar-group-title">{group.title}</div>
 
               {group.items.map((item) => {
                 const isActive = activeMenu === item.id
-                const isKeyboardSelected =
-                  keyboardSelectedMenu === item.id
+                const isKeyboardSelected = keyboardSelectedMenu === item.id
 
                 return (
                   <button
@@ -242,45 +244,31 @@ export function AppShell({
                       onMenuSelect(item.id)
                     }}
                   >
-                    <span className="sidebar-item-icon">
-                      {item.icon}
-                    </span>
+                    <span className="sidebar-item-icon">{item.icon}</span>
 
-                    <span className="sidebar-item-label">
-                      {item.label}
-                    </span>
+                    <span className="sidebar-item-label">{item.label}</span>
                   </button>
                 )
               })}
             </div>
           ))}
 
-          <button
-            type="button"
-            className="sidebar-item sidebar-item-quit"
-            onClick={onQuit}
-          >
+          <button type="button" className="sidebar-item sidebar-item-quit" onClick={onQuit}>
             <span className="sidebar-item-icon">⏻</span>
 
-            <span className="sidebar-item-label">
-              Quit Application
-            </span>
+            <span className="sidebar-item-label">Quit Application</span>
           </button>
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-footer-name">
-            Kirana Mart POS
-          </div>
+          <div className="sidebar-footer-name">Kirana Mart POS</div>
         </div>
       </aside>
 
       <main className="app-main">
         <header className="app-topbar">
           <div className="app-topbar-title">
-            {menuItems.find(
-              (item) => item.id === activeMenu
-            )?.label ?? 'Dashboard'}
+            {menuItems.find((item) => item.id === activeMenu)?.label ?? 'Dashboard'}
           </div>
 
           <div className="app-topbar-right">
@@ -292,15 +280,11 @@ export function AppShell({
               })}
             </span>
 
-            <span className="app-user">
-              Admin
-            </span>
+            <span className="app-user">Admin</span>
           </div>
         </header>
 
-        <section className="app-content">
-          {children}
-        </section>
+        <section className="app-content">{children}</section>
       </main>
     </div>
   )
