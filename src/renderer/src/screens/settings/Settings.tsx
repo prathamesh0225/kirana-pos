@@ -16,6 +16,7 @@ export function Settings({ onBack }: SettingsProps) {
   const [selectedPrinter, setSelectedPrinter] = useState('')
   const [savedPrinter, setSavedPrinter] = useState<string | null>(null)
 
+  const [isRestoring, setIsRestoring] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -29,13 +30,17 @@ export function Settings({ onBack }: SettingsProps) {
 
   useEffect(() => {
     async function loadSystemInfo() {
-      const [info, database] = await Promise.all([
-        window.kirana.app.getInfo(),
-        window.kirana.database.test()
-      ])
+      try {
+        const [info, database] = await Promise.all([
+          window.kirana.app.getInfo(),
+          window.kirana.database.test()
+        ])
 
-      setAppInfo(info)
-      setDatabaseVersion(database.migrationVersion)
+        setAppInfo(info)
+        setDatabaseVersion(database.migrationVersion)
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'Failed to load system information')
+      }
     }
 
     void loadSystemInfo()
@@ -138,6 +143,36 @@ export function Settings({ onBack }: SettingsProps) {
     }
   }
 
+  async function handleRestore() {
+    const confirmed = window.confirm(
+      'RESTORE DATABASE?\n\n' +
+        'This will replace your current shop data with the selected backup.\n\n' +
+        'A safety backup of your current data will be created automatically.\n\n' +
+        'The application will restart after restoration.\n\n' +
+        'Do you want to continue?'
+    )
+
+    if (!confirmed) return
+
+    setIsRestoring(true)
+    setMessage('Validating and restoring database...')
+
+    try {
+      const result = await window.kirana.database.restore()
+
+      if (result.canceled) {
+        setMessage('Restore cancelled')
+        return
+      }
+
+      setMessage('Database restored successfully. Restarting application...')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Database restoration failed')
+    } finally {
+      setIsRestoring(false)
+    }
+  }
+
   const selectedPrinterExists = printers.some((printer) => printer.name === selectedPrinter)
 
   if (isLoading) {
@@ -154,6 +189,7 @@ export function Settings({ onBack }: SettingsProps) {
       <div className="settings-title">SETTINGS</div>
 
       <div className="settings-panel">
+        {/* APP INFO */}
         <div className="settings-section-title">APP INFO</div>
 
         <section className="settings-system-info">
@@ -172,7 +208,10 @@ export function Settings({ onBack }: SettingsProps) {
             <strong>{databaseVersion ?? '—'}</strong>
           </div>
         </section>
+
+        {/* PRINTER */}
         <div className="settings-section-title">PRINTER</div>
+
         <div className="settings-row">
           <label htmlFor="thermal-printer">Thermal Printer</label>
 
@@ -203,22 +242,39 @@ export function Settings({ onBack }: SettingsProps) {
         </div>
 
         <div className="settings-actions">
-          <button type="button" onClick={() => void handleSave()} disabled={isSaving}>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving || isRestoring}
+          >
             {isSaving ? 'SAVING...' : 'SAVE'}
           </button>
 
-          <button type="button" onClick={() => void handleTestPrint()} disabled={!selectedPrinter}>
+          <button
+            type="button"
+            onClick={() => void handleTestPrint()}
+            disabled={!selectedPrinter || isRestoring}
+          >
             TEST PRINT
           </button>
         </div>
 
+        {/* DATABASE */}
         <div className="settings-section-title">DATABASE</div>
 
         <div className="settings-row">
           <label>Database Backup</label>
 
-          <button type="button" onClick={() => void handleBackup()}>
+          <button type="button" onClick={() => void handleBackup()} disabled={isRestoring}>
             BACKUP DATABASE
+          </button>
+        </div>
+
+        <div className="settings-row">
+          <label>Database Recovery</label>
+
+          <button type="button" onClick={() => void handleRestore()} disabled={isRestoring}>
+            {isRestoring ? 'RESTORING...' : 'RESTORE DATABASE'}
           </button>
         </div>
 

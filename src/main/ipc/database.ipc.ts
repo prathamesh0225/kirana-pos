@@ -1,6 +1,9 @@
-import { dialog, ipcMain } from 'electron'
-import { backupDatabase, getDatabase, getDatabaseBackupDirectory } from '../database'
+import { app, dialog, ipcMain } from 'electron'
 import path from 'node:path'
+
+import { backupDatabase, getDatabase, getDatabaseBackupDirectory } from '../database'
+import { restoreDatabaseFromBackup } from '../database/restore'
+
 export function registerDatabaseIpc(): void {
   ipcMain.handle('database:test', () => {
     const db = getDatabase()
@@ -33,9 +36,7 @@ export function registerDatabaseIpc(): void {
     })
 
     if (result.canceled || !result.filePath) {
-      return {
-        canceled: true
-      }
+      return { canceled: true }
     }
 
     await backupDatabase(result.filePath)
@@ -43,6 +44,37 @@ export function registerDatabaseIpc(): void {
     return {
       canceled: false,
       filePath: result.filePath
+    }
+  })
+
+  ipcMain.handle('database:restore', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Kirana Database Backup',
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'SQLite Database Backup',
+          extensions: ['db']
+        }
+      ]
+    })
+
+    if (result.canceled || !result.filePaths[0]) {
+      return { canceled: true }
+    }
+
+    const restoreResult = await restoreDatabaseFromBackup(result.filePaths[0])
+
+    // Allow the IPC response to reach the renderer before restarting.
+    setTimeout(() => {
+      app.relaunch()
+      app.exit(0)
+    }, 700)
+
+    return {
+      canceled: false,
+      safetyBackupPath: restoreResult.safetyBackupPath,
+      migrationVersion: restoreResult.migrationVersion
     }
   })
 

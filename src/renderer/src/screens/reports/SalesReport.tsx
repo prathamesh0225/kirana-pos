@@ -117,7 +117,10 @@ export default function SalesReport({
         `tbody tr[data-row-index="${selectedRowIndex}"]`
       )
 
-      selectedRow?.scrollIntoView({ block: 'nearest' })
+      selectedRow?.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest'
+      })
     })
   }, [active, restoreFocusRequest, selectedRowIndex])
 
@@ -335,7 +338,10 @@ export default function SalesReport({
       'tbody tr[data-row-index="' + selectedRowIndex + '"]'
     )
 
-    selectedRow?.scrollIntoView({ block: 'nearest' })
+    selectedRow?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest'
+    })
   }, [selectedRowIndex, activeTab, report])
 
   function selectRow(index: number): void {

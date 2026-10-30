@@ -465,6 +465,7 @@ ADD COLUMN batch_id INTEGER REFERENCES stock_batches(id);`
   }
 ]
 
+export const LATEST_MIGRATION_VERSION = migrations[migrations.length - 1].version
 export async function runMigrations(): Promise<void> {
   const db = getDatabase()
 

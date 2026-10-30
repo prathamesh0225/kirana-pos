@@ -129,6 +129,12 @@ declare global {
           filePath?: string
         }>
 
+        restore: () => Promise<{
+          canceled: boolean
+          safetyBackupPath?: string
+          migrationVersion?: number
+        }>
+
         backupOnExit: () => Promise<{
           ok: boolean
           filePath: string

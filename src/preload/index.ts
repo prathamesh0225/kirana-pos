@@ -29,6 +29,9 @@ const api = {
     test: () => ipcRenderer.invoke('database:test'),
 
     backup: () => ipcRenderer.invoke('database:backup'),
+
+    restore: () => ipcRenderer.invoke('database:restore'),
+
     backupOnExit: () => ipcRenderer.invoke('database:backupOnExit')
   },
 
