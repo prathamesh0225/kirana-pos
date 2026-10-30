@@ -2314,12 +2314,12 @@ function Billing({
               </div>
             ) : mode === 'modify' ? (
               <div className="billing-footer">
+                <span>F1 Back</span>
                 <span>F2 Add Item</span>
                 <span>F3 General Item</span>
                 <span>F6 Save</span>
                 <span>Enter Add</span>
                 <span>Delete Remove</span>
-                <span>Esc Back</span>
               </div>
             ) : (
               <div className="billing-footer">

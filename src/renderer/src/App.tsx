@@ -16,6 +16,9 @@ import SalesReport from './screens/reports/SalesReport'
 
 type HistoricalBillMode = 'view' | 'modify'
 
+type HistoricalBillOrigin =
+  { type: 'bill-history'; returnTo: 'dashboard' | 'billing' } | { type: 'sales-report' }
+
 type Screen =
   | {
       type: 'dashboard'
@@ -49,6 +52,7 @@ type Screen =
       type: 'historical-bill'
       saleId: number
       mode: HistoricalBillMode
+      origin: HistoricalBillOrigin
     }
   | {
       type: 'purchase-entry'
@@ -117,6 +121,20 @@ function App(): React.JSX.Element {
   const [historicalBillingSession, setHistoricalBillingSession] = useState<BillingSession | null>(
     null
   )
+
+  const [salesReportBill, setSalesReportBill] = useState<{
+    saleId: number
+    mode: HistoricalBillMode
+  } | null>(null)
+
+  const [billHistoryBill, setBillHistoryBill] = useState<{
+    saleId: number
+    mode: HistoricalBillMode
+  } | null>(null)
+
+  const [billHistoryTemporarySession] = useState(() => createNewBillingSession(''))
+
+  const [salesReportRestoreFocusRequest, setSalesReportRestoreFocusRequest] = useState(0)
 
   const [showExitBillingConfirm, setShowExitBillingConfirm] = useState(false)
   const [billingFocusRestoreRequest, setBillingFocusRestoreRequest] = useState(0)
@@ -310,15 +328,16 @@ function App(): React.JSX.Element {
    * Billing.tsx will load the actual sale using saleId.
    * We only change the screen here.
    */
-  function handleOpenHistoricalBill(saleId: number): void {
-    setHistoricalBillingSession(null)
+  // function handleOpenHistoricalBill(saleId: number, origin: HistoricalBillOrigin): void {
+  //   setHistoricalBillingSession(null)
 
-    setScreen({
-      type: 'historical-bill',
-      saleId,
-      mode: 'view'
-    })
-  }
+  //   setScreen({
+  //     type: 'historical-bill',
+  //     saleId,
+  //     mode: 'view',
+  //     origin
+  //   })
+  // }
 
   /*
    * Switch the historical bill from VIEW -> MODIFY.
@@ -343,9 +362,26 @@ function App(): React.JSX.Element {
   function handleBackFromHistoricalBill(): void {
     setHistoricalBillingSession(null)
 
+    if (screen.type !== 'historical-bill') {
+      setScreen({
+        type: 'bill-history',
+        returnTo: 'dashboard'
+      })
+      return
+    }
+
+    // If opened from Sales Report, return to Sales Report.
+    if (screen.origin.type === 'sales-report') {
+      setScreen({
+        type: 'sales-report'
+      })
+      return
+    }
+
+    // If opened from Bill History, preserve its return destination.
     setScreen({
       type: 'bill-history',
-      returnTo: 'dashboard'
+      returnTo: screen.origin.returnTo
     })
   }
 
@@ -514,25 +550,81 @@ function App(): React.JSX.Element {
    */
   if (screen.type === 'bill-history') {
     return (
-      <BillHistory
-        onBack={() => {
-          setScreen({
-            type: screen.returnTo
-          })
-        }}
-        onOpenBill={(saleId) => {
-          handleOpenHistoricalBill(saleId)
-        }}
-        onModifyBill={(saleId) => {
-          setHistoricalBillingSession(null)
+      <>
+        {/* Keep Bill History mounted underneath the historical bill. */}
+        <div
+          style={{
+            display: billHistoryBill ? 'none' : 'block',
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          <BillHistory
+            active={!billHistoryBill}
+            onBack={() => {
+              setScreen({
+                type: screen.returnTo
+              })
+            }}
+            onOpenBill={(saleId) => {
+              setHistoricalBillingSession(null)
 
-          setScreen({
-            type: 'historical-bill',
-            saleId,
-            mode: 'modify'
-          })
-        }}
-      />
+              setBillHistoryBill({
+                saleId,
+                mode: 'view'
+              })
+            }}
+            onModifyBill={(saleId) => {
+              setHistoricalBillingSession(null)
+
+              setBillHistoryBill({
+                saleId,
+                mode: 'modify'
+              })
+            }}
+          />
+        </div>
+
+        {/* Historical Bill overlay */}
+        {billHistoryBill && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1000,
+              width: '100%',
+              height: '100%',
+              background: '#ffffff'
+            }}
+          >
+            <Billing
+              key={billHistoryBill.saleId}
+              session={historicalBillingSession ?? billHistoryTemporarySession}
+              onSessionChange={(update) => {
+                setHistoricalBillingSession((currentSession) => {
+                  const baseSession = currentSession ?? billHistoryTemporarySession
+
+                  return typeof update === 'function' ? update(baseSession) : update
+                })
+              }}
+              mode={billHistoryBill.mode}
+              saleId={billHistoryBill.saleId}
+              onModifyMode={() => {
+                setBillHistoryBill((current) => (current ? { ...current, mode: 'modify' } : null))
+              }}
+              onBack={() => {
+                setHistoricalBillingSession(null)
+                setBillHistoryBill(null)
+              }}
+              onAddItem={() => {}}
+              onEditItem={() => {}}
+              onNewBill={() => {}}
+              onBillCompleted={() => {}}
+              onOpenBillHistory={() => {}}
+            />
+          </div>
+        )}
+      </>
     )
   }
 
@@ -827,15 +919,85 @@ function App(): React.JSX.Element {
    */
 
   if (screen.type === 'sales-report') {
+    const temporaryHistoricalSession: BillingSession =
+      historicalBillingSession ?? createNewBillingSession('')
+
     return (
-      <SalesReport
-        onBack={() => {
-          setScreen({ type: 'dashboard' })
-        }}
-        onOpenBill={(saleId) => {
-          handleOpenHistoricalBill(saleId)
-        }}
-      />
+      <>
+        {/* Keep Sales Report mounted while the bill is displayed. */}
+        <div
+          style={{
+            display: salesReportBill ? 'none' : 'block',
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          <SalesReport
+            active={!salesReportBill}
+            restoreFocusRequest={salesReportRestoreFocusRequest}
+            onBack={() => {
+              setScreen({ type: 'dashboard' })
+            }}
+            onOpenBill={(saleId) => {
+              setHistoricalBillingSession(null)
+              setSalesReportBill({
+                saleId,
+                mode: 'view'
+              })
+            }}
+          />
+        </div>
+
+        {/* Display the historical bill over the existing report. */}
+        {salesReportBill && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1000,
+              width: '100%',
+              height: '100%',
+              background: '#ffffff'
+            }}
+          >
+            <Billing
+              session={temporaryHistoricalSession}
+              onSessionChange={(update) => {
+                setHistoricalBillingSession((currentSession) => {
+                  const baseSession = currentSession ?? temporaryHistoricalSession
+
+                  return typeof update === 'function' ? update(baseSession) : update
+                })
+              }}
+              mode={salesReportBill.mode}
+              saleId={salesReportBill.saleId}
+              onModifyMode={() => {
+                setSalesReportBill((current) => (current ? { ...current, mode: 'modify' } : null))
+              }}
+              onBack={() => {
+                setHistoricalBillingSession(null)
+                setSalesReportRestoreFocusRequest((request) => request + 1)
+                setSalesReportBill(null)
+              }}
+              onAddItem={() => {
+                // Historical bills cannot add new products here.
+              }}
+              onEditItem={() => {
+                // Keep historical bill navigation unchanged.
+              }}
+              onNewBill={() => {
+                // New bills are blocked in historical mode.
+              }}
+              onBillCompleted={() => {
+                // Historical bills cannot be completed again.
+              }}
+              onOpenBillHistory={() => {
+                // Keep the user in the Sales Report flow.
+              }}
+            />
+          </div>
+        )}
+      </>
     )
   }
   /*

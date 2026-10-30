@@ -10,6 +10,7 @@ type BillHistoryProps = {
   onBack: () => void
   onOpenBill: (saleId: number) => void
   onModifyBill: (saleId: number) => void
+  active?: boolean
 }
 
 function formatMoney(paise: number): string {
@@ -74,7 +75,12 @@ function getLocalDateOnly(value: string): string | null {
   return `${year}-${month}-${day}`
 }
 
-export default function BillHistory({ onBack, onOpenBill, onModifyBill }: BillHistoryProps) {
+export default function BillHistory({
+  onBack,
+  onOpenBill,
+  onModifyBill,
+  active = true
+}: BillHistoryProps) {
   /*
    * All bills loaded from the database.
    *
@@ -248,7 +254,7 @@ export default function BillHistory({ onBack, onOpenBill, onModifyBill }: BillHi
      * Do not register Bill History keyboard actions until
      * the date filter has been applied.
      */
-    if (!dateFilterApplied) {
+    if (!dateFilterApplied || !active) {
       return
     }
 
@@ -325,7 +331,7 @@ export default function BillHistory({ onBack, onOpenBill, onModifyBill }: BillHi
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [bills, selectedIndex, dateFilterApplied, onBack, onOpenBill, onModifyBill])
+  }, [bills, selectedIndex, dateFilterApplied, active, onBack, onOpenBill, onModifyBill])
 
   /*
    * Apply Date Filter.

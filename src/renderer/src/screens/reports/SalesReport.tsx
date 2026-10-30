@@ -11,6 +11,8 @@ type ReportData = Awaited<ReturnType<typeof window.kirana.billing.getSalesReport
 type Props = {
   onBack: () => void
   onOpenBill: (saleId: number) => void
+  active?: boolean
+  restoreFocusRequest?: number
 }
 
 const TABS: Array<[Tab, string]> = [
@@ -66,7 +68,12 @@ function downloadCsv(filename: string, rows: unknown[][]): void {
   URL.revokeObjectURL(url)
 }
 
-export default function SalesReport({ onBack, onOpenBill }: Props): React.ReactElement {
+export default function SalesReport({
+  onBack,
+  onOpenBill,
+  active = true,
+  restoreFocusRequest = 0
+}: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<Tab>('daily')
 
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -84,7 +91,35 @@ export default function SalesReport({ onBack, onOpenBill }: Props): React.ReactE
 
   const tableWrapRef = useRef<HTMLDivElement>(null)
 
-  const [tableHasFocus, setTableHasFocus] = useState(false)
+  const previousRestoreRequest = useRef(restoreFocusRequest)
+
+  useEffect(() => {
+    if (previousRestoreRequest.current === restoreFocusRequest) {
+      return
+    }
+
+    previousRestoreRequest.current = restoreFocusRequest
+
+    if (!active) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      const table = tableWrapRef.current
+
+      if (!table) {
+        return
+      }
+
+      table.focus()
+
+      const selectedRow = table.querySelector<HTMLElement>(
+        `tbody tr[data-row-index="${selectedRowIndex}"]`
+      )
+
+      selectedRow?.scrollIntoView({ block: 'nearest' })
+    })
+  }, [active, restoreFocusRequest, selectedRowIndex])
 
   const totalBills = report?.bills.length ?? 0
 
@@ -203,6 +238,9 @@ export default function SalesReport({ onBack, onOpenBill }: Props): React.ReactE
   // Keyboard shortcuts that work throughout the Sales Report screen.
   useEffect(() => {
     function handleGlobalKeyDown(event: KeyboardEvent): void {
+      if (!active) {
+        return
+      }
       // Do not hijack shortcuts while the user is typing into a control.
       const target = event.target
 
@@ -250,7 +288,7 @@ export default function SalesReport({ onBack, onOpenBill }: Props): React.ReactE
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown)
     }
-  }, [dateDialogOpen, onBack, report, dateRange, activeTab, loading])
+  }, [active, dateDialogOpen, onBack, report, dateRange, activeTab, loading])
 
   function handleReportTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
     if (dateDialogOpen || loading || !report || visibleRowCount === 0) return
@@ -396,8 +434,6 @@ export default function SalesReport({ onBack, onOpenBill }: Props): React.ReactE
             className="sales-report-table-wrap"
             ref={tableWrapRef}
             tabIndex={0}
-            onFocus={() => setTableHasFocus(true)}
-            onBlur={() => setTableHasFocus(false)}
             onKeyDown={handleReportTableKeyDown}
             aria-label={`${activeTab} report table. Use arrow keys to navigate rows.`}
           >
