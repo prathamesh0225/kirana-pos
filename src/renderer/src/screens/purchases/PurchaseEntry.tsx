@@ -1750,6 +1750,76 @@ export default function PurchaseEntry({
 
   /*
    * ---------------------------------------------------------
+   * Return focus to the blank Product row on screen misclick
+   * ---------------------------------------------------------
+   */
+
+  function handlePurchaseEntryMouseDownCapture(event: React.MouseEvent<HTMLDivElement>): void {
+    if (
+      !isActive ||
+      showItemSelector ||
+      showSupplierSelector ||
+      showPayment ||
+      showLeaveConfirmation
+    ) {
+      return
+    }
+
+    const target = event.target
+
+    if (!(target instanceof HTMLElement)) {
+      return
+    }
+
+    // Do not steal focus from actual fields or interactive controls.
+    const clickedField = target.closest(
+      [
+        'input',
+        'textarea',
+        'select',
+        'button',
+        'a',
+        '[contenteditable="true"]',
+        '.purchase-field',
+        '.purchase-summary-row',
+        'tr:not(.empty-row)'
+      ].join(',')
+    )
+
+    if (clickedField) {
+      return
+    }
+
+    // Preserve the current product value before leaving its field.
+    if (
+      selectedLine?.productId !== null &&
+      activeField !== 'product' &&
+      !canLeaveCurrentPurchaseField()
+    ) {
+      return
+    }
+
+    if (selectedLine?.productId !== null && activeField !== 'product' && !commitCurrentEdit()) {
+      return
+    }
+
+    const blankIndex = lines.length - 1
+
+    setSelectedIndex(blankIndex)
+    setActiveField('product')
+    setBarcodeInput('')
+    setProductNotFound(false)
+    setEditInput('')
+    setSaveMessage('')
+    setFinalizeStep(null)
+
+    requestAnimationFrame(() => {
+      productInputRef.current?.focus()
+    })
+  }
+
+  /*
+   * ---------------------------------------------------------
    * Payment screen
    * ---------------------------------------------------------
    */
@@ -1943,7 +2013,11 @@ export default function PurchaseEntry({
    */
 
   return (
-    <div className="purchase-entry" tabIndex={-1}>
+    <div
+      className="purchase-entry"
+      tabIndex={-1}
+      onMouseDownCapture={handlePurchaseEntryMouseDownCapture}
+    >
       <div className="purchase-title">
         <div>PURCHASE ENTRY</div>
       </div>
