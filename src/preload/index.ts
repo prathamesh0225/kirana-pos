@@ -92,7 +92,23 @@ const api = {
     ) => ipcRenderer.invoke('products:adjustStock', productId, data),
 
     getStockHistory: (productId: number, fromDate?: string | null, toDate?: string | null) =>
-      ipcRenderer.invoke('products:getStockHistory', productId, fromDate, toDate)
+      ipcRenderer.invoke('products:getStockHistory', productId, fromDate, toDate),
+
+    getStockBatches: (productId: number) =>
+      ipcRenderer.invoke('products:getStockBatches', productId),
+
+    saveStockBatch: (
+      productId: number,
+      data: {
+        id?: number
+        batchNumber: string | null
+        expiryDate: string | null
+        mrpPaise: number
+        purchaseRatePaise: number
+        sellingRatePaise: number
+        quantity: number
+      }
+    ) => ipcRenderer.invoke('products:saveStockBatch', productId, data)
   },
 
   billing: {

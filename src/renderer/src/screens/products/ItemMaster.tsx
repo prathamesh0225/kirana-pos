@@ -17,6 +17,8 @@ import BarcodePrintDialog from '../../components/barcode-print-dialog/BarcodePri
 
 import ContextPanel from '../../components/context-panel/ContextPanel'
 
+import StockBatchManager from './StockBatchManager'
+
 type ItemMasterProps = {
   mode?: 'manage' | 'select'
   initialFilter?: 'all' | 'low-stock'
@@ -74,6 +76,8 @@ function ItemMaster({
   const [stockThreshold, setStockThreshold] = useState('0')
 
   const [stockAdjustmentProduct, setStockAdjustmentProduct] = useState<ProductRecord | null>(null)
+
+  const [batchProduct, setBatchProduct] = useState<ProductRecord | null>(null)
 
   const [stockHistoryProduct, setStockHistoryProduct] = useState<ProductRecord | null>(null)
 
@@ -293,6 +297,7 @@ function ItemMaster({
        * Item Master must not process any shortcuts.
        */
       if (
+        batchProduct ||
         stockHistoryDateFilterOpen ||
         stockAdjustmentProduct ||
         stockHistoryProduct ||
@@ -359,6 +364,18 @@ function ItemMaster({
         setStockHistoryProduct(selectedProduct)
 
         setStockHistoryDateFilterOpen(true)
+
+        return
+      }
+
+      if (event.key === 'F6' && mode === 'manage') {
+        event.preventDefault()
+
+        const product = visibleProducts[selectedIndex]
+
+        if (product) {
+          setBatchProduct(product)
+        }
 
         return
       }
@@ -599,6 +616,7 @@ function ItemMaster({
             <span>F3 Edit</span>
             <span>F4 Stock Adj</span>
             <span>F5 History</span>
+            <span>F6 Batches</span>
             <span>Enter No Action</span>
             <span>Esc Back</span>
             <span>DELETE Enable/Disable</span>
@@ -781,6 +799,7 @@ function ItemMaster({
           <span>F3 Edit</span>
           <span>F4 Stock Adj</span>
           <span>F5 History</span>
+          <span>F6 Batches</span>
           <span>Enter No Action</span>
           <span>Esc Back</span>
           <span>DELETE Enable/Disable</span>
@@ -937,6 +956,23 @@ function ItemMaster({
             })
           }}
         />
+
+        {batchProduct && (
+          <StockBatchManager
+            product={batchProduct}
+            onClose={async (saved): Promise<void> => {
+              setBatchProduct(null)
+
+              if (saved) {
+                await loadProducts()
+              }
+
+              requestAnimationFrame(() => {
+                searchRef.current?.focus()
+              })
+            }}
+          />
+        )}
       </div>
 
       <ContextPanel mode="blank" />

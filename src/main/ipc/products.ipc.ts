@@ -15,7 +15,11 @@ import {
   generateProductBarcode
 } from '../services/product.service'
 
-import { getStockHistory } from '../services/stock.service'
+import {
+  getStockHistory,
+  getProductStockBatches,
+  saveProductStockBatch
+} from '../services/stock.service'
 
 export function registerProductIpc(): void {
   ipcMain.handle('products:getByBarcode', (_, barcode: string) => {
@@ -78,4 +82,12 @@ export function registerProductIpc(): void {
     (_event, productId: number, fromDate?: string | null, toDate?: string | null) =>
       getStockHistory(productId, fromDate, toDate)
   )
+
+  ipcMain.handle('products:getStockBatches', (_, productId: number) => {
+    return getProductStockBatches(productId)
+  })
+
+  ipcMain.handle('products:saveStockBatch', (_, productId: number, data) => {
+    return saveProductStockBatch(productId, data)
+  })
 }

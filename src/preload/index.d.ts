@@ -203,6 +203,34 @@ declare global {
           fromDate?: string | null,
           toDate?: string | null
         ) => Promise<StockMovementRecord[]>
+
+        getStockBatches: (productId: number) => Promise<
+          Array<{
+            id: number
+            product_id: number
+            batch_number: string | null
+            expiry_date: string | null
+            mrp_paise: number
+            purchase_rate_paise: number
+            selling_rate_paise: number
+            quantity: number
+            created_at: string
+            updated_at: string
+          }>
+        >
+
+        saveStockBatch: (
+          productId: number,
+          data: {
+            id?: number
+            batchNumber: string | null
+            expiryDate: string | null
+            mrpPaise: number
+            purchaseRatePaise: number
+            sellingRatePaise: number
+            quantity: number
+          }
+        ) => Promise<unknown>
       }
 
       billing: {

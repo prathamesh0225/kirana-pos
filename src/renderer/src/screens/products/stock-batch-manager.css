@@ -1,0 +1,298 @@
+
+.batch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 20, 32, 0.65);
+}
+
+.batch-window {
+  position: relative;
+  width: min(1200px, 96vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #e4edf3;
+  border: 2px solid #173f66;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #172b3b;
+  font-family: "Courier New", Consolas, monospace;
+}
+
+.batch-window:focus {
+  outline: none;
+}
+
+/* Header */
+.batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  background: #173f66;
+  color: white;
+  flex-shrink: 0;
+}
+
+.batch-header strong {
+  font-size: 19px;
+}
+
+.batch-header button {
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+
+/* Table area */
+.batch-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  table-layout: fixed;
+}
+
+.batch-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 6px;
+  background: #b9cfdd;
+  border: 1px solid #91a8b7;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.batch-table td {
+  padding: 5px;
+  border: 1px solid #c8d4dc;
+  transition: background-color 0.12s ease;
+}
+
+.batch-table input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  border: 1px solid #a5b5c0;
+  border-radius: 2px;
+  background: white;
+  color: #172b3b;
+  font: 14px "Courier New", Consolas, monospace;
+}
+
+.batch-table input:focus {
+  outline: 2px solid #173f66;
+  outline-offset: -2px;
+  background: #f0f7ff;
+}
+
+/* Whole-row selection */
+.batch-table tbody tr {
+  cursor: pointer;
+}
+
+.batch-table tbody tr.batch-selected-row {
+  background: #c9def8;
+}
+
+.batch-table tbody tr.batch-selected-row td {
+  background: #c9def8;
+  border-top: 2px solid #2871c7;
+  border-bottom: 2px solid #2871c7;
+}
+
+/* Keep cells visually unified when row is selected */
+.batch-table tbody tr.batch-selected-row input {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* Only show input focus while actively editing */
+.batch-table tbody tr.batch-selected-row input:focus {
+  background: white;
+  border: 1px solid #2871c7;
+  outline: 2px solid #2871c7;
+  outline-offset: -2px;
+}
+
+/* New blank row */
+.batch-new-row {
+  background: #edf6fc;
+}
+
+.batch-new-row td {
+  background: #edf6fc;
+}
+
+.batch-new-row input {
+  border-style: dashed;
+  background: #f8fcff;
+}
+
+.batch-new-row input:focus {
+  border-style: solid;
+  background: white;
+}
+
+/* Summary */
+.batch-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: #d1e0e9;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Error */
+.batch-error {
+  padding: 8px 18px;
+  color: #b42318;
+  background: #fff0ed;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.batch-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 14px;
+  background: #173f66;
+  color: white;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.batch-footer > div {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.batch-footer button {
+  min-width: 90px;
+  height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Delete confirmation overlay */
+.batch-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 45%);
+}
+
+.batch-confirm-dialog {
+  width: 360px;
+  max-width: calc(100% - 32px);
+  padding: 22px;
+  border-radius: 8px;
+  background: white;
+  color: #172b3b;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 20%);
+}
+
+.batch-confirm-dialog h3 {
+  margin: 0 0 12px;
+}
+
+.batch-confirm-dialog p {
+  margin-bottom: 22px;
+  line-height: 1.5;
+}
+
+.batch-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.batch-confirm-actions button {
+  min-width: 80px;
+  height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Scrollbar */
+.batch-table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.batch-table-wrap::-webkit-scrollbar-track {
+  background: #d1e0e9;
+}
+
+.batch-table-wrap::-webkit-scrollbar-thumb {
+  background: #8da9bc;
+  border: 2px solid #d1e0e9;
+  border-radius: 6px;
+}
+
+.batch-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #607f96;
+}
+
+/* Smaller screens */
+@media (max-width: 768px) {
+  .batch-overlay {
+    padding: 10px;
+  }
+
+  .batch-window {
+    width: 100%;
+    max-height: 92vh;
+  }
+
+  .batch-table-wrap {
+    padding: 8px;
+  }
+
+  .batch-table th {
+    padding: 8px 4px;
+    font-size: 11px;
+  }
+
+  .batch-table td {
+    padding: 3px;
+  }
+
+  .batch-table input {
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .batch-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .batch-footer > div {
+    margin-left: 0;
+  }
+}
