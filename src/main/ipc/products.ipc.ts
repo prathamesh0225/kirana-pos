@@ -18,7 +18,8 @@ import {
 import {
   getStockHistory,
   getProductStockBatches,
-  saveProductStockBatch
+  saveProductStockBatch,
+  deleteProductStockBatch
 } from '../services/stock.service'
 
 export function registerProductIpc(): void {
@@ -89,5 +90,11 @@ export function registerProductIpc(): void {
 
   ipcMain.handle('products:saveStockBatch', (_, productId: number, data) => {
     return saveProductStockBatch(productId, data)
+  })
+
+  ipcMain.handle('products:deleteStockBatch', (_, productId: number, batchId: number) => {
+    deleteProductStockBatch(productId, batchId)
+
+    return { success: true }
   })
 }

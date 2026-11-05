@@ -7,6 +7,7 @@ import { getProductByIdAnyStatus } from './product.service'
 import {
   listStockBatches,
   saveStockBatch,
+  deleteStockBatch,
   type SaveStockBatchInput
 } from '../repositories/stock.repository'
 
@@ -90,4 +91,26 @@ export function saveProductStockBatch(productId: number, input: SaveStockBatchIn
     },
     new Date().toISOString()
   )
+}
+
+export function deleteProductStockBatch(productId: number, batchId: number): void {
+  if (!Number.isInteger(productId) || productId <= 0) {
+    throw new Error('Invalid product ID')
+  }
+
+  if (!Number.isInteger(batchId) || batchId <= 0) {
+    throw new Error('Invalid batch ID')
+  }
+
+  const product = getProductByIdAnyStatus(productId)
+
+  if (!product) {
+    throw new Error('Product not found')
+  }
+
+  if (!product.is_active) {
+    throw new Error('Cannot delete batches for a disabled product')
+  }
+
+  deleteStockBatch(productId, batchId)
 }

@@ -231,6 +231,13 @@ declare global {
             quantity: number
           }
         ) => Promise<unknown>
+
+        deleteStockBatch: (
+          productId: number,
+          batchId: number
+        ) => Promise<{
+          success: boolean
+        }>
       }
 
       billing: {

@@ -115,8 +115,10 @@ export function listStockBatches(productId: number): StockBatchRecord[] {
       FROM stock_batches
       WHERE product_id = ?
       ORDER BY
-        CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END,
-        expiry_date, id
+  CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END,
+  CASE WHEN expiry_date IS NOT NULL THEN expiry_date END ASC,
+  CASE WHEN expiry_date IS NULL THEN id END DESC,
+  id ASC
     `
     )
     .all(productId) as StockBatchRecord[]
@@ -248,5 +250,60 @@ export function saveStockBatch(
     `
       )
       .get(batchId) as StockBatchRecord
+  })()
+}
+
+export function deleteStockBatch(productId: number, batchId: number): void {
+  const db = getDatabase()
+
+  db.transaction(() => {
+    const batch = db
+      .prepare(
+        `
+        SELECT id, product_id, quantity
+        FROM stock_batches
+        WHERE id = ? AND product_id = ?
+        `
+      )
+      .get(batchId, productId) as { id: number; product_id: number; quantity: number } | undefined
+
+    if (!batch) {
+      throw new Error('Batch not found')
+    }
+
+    if (batch.quantity !== 0) {
+      throw new Error('Only batches with zero stock can be deleted')
+    }
+
+    const purchaseReference = db
+      .prepare(
+        `
+        SELECT id
+        FROM purchase_items
+        WHERE batch_id = ?
+        LIMIT 1
+        `
+      )
+      .get(batchId)
+
+    if (purchaseReference) {
+      throw new Error('This batch is linked to purchase history and cannot be permanently deleted')
+    }
+
+    // Preserve stock movement history, but detach it from this batch.
+    db.prepare(
+      `
+      UPDATE stock_movements
+      SET batch_id = NULL
+      WHERE batch_id = ?
+      `
+    ).run(batchId)
+
+    db.prepare(
+      `
+      DELETE FROM stock_batches
+      WHERE id = ? AND product_id = ?
+      `
+    ).run(batchId, productId)
   })()
 }

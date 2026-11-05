@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import './stock-batch-manager.css'
 
 type BatchForm = {
@@ -15,6 +16,8 @@ type Props = {
   product: ProductRecord
   onClose: (saved: boolean) => void
 }
+
+type ConfirmAction = 'save' | 'discard' | null
 
 const fields: Array<keyof BatchForm> = [
   'batchNumber',
@@ -42,10 +45,14 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
   const [selectedRow, setSelectedRow] = useState(0)
   const [deleteConfirmRow, setDeleteConfirmRow] = useState<number | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [deleting, setDeleting] = useState(false)
 
   const refs = useRef<Array<Array<HTMLInputElement | null>>>([])
   const windowRef = useRef<HTMLDivElement>(null)
+  const initialRowsRef = useRef<BatchForm[]>([])
+
+  const isDirty = JSON.stringify(rows) !== JSON.stringify(initialRowsRef.current)
 
   // Load existing batches.
   useEffect(() => {
@@ -53,7 +60,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
       try {
         const batches = await window.kirana.products.getStockBatches(product.id)
 
-        setRows([
+        const loadedRows: BatchForm[] = [
           ...batches.map((batch) => ({
             id: batch.id,
             batchNumber: batch.batch_number ?? '',
@@ -64,7 +71,10 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
             stock: String(batch.quantity)
           })),
           emptyRow()
-        ])
+        ]
+
+        initialRowsRef.current = JSON.parse(JSON.stringify(loadedRows))
+        setRows(loadedRows)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to load batches')
       } finally {
@@ -75,7 +85,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     void load()
   }, [product.id])
 
-  // Select the first row when the overlay opens.
+  // Focus the batch window when loading finishes.
   useEffect(() => {
     if (!loading) {
       setSelectedRow(0)
@@ -105,19 +115,17 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     )
   }
 
-  // Focus a particular field for editing.
   function focus(row: number, field: number): void {
     setSelectedRow(row)
 
     requestAnimationFrame(() => {
       const input = refs.current[row]?.[field]
-
       input?.focus()
       input?.select()
     })
   }
 
-  // Select an entire row without focusing an individual input.
+  // Select a complete row without focusing an input.
   function selectRow(row: number): void {
     setSelectedRow(row)
 
@@ -126,17 +134,42 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     })
   }
 
+  function requestClose(): void {
+    if (saving || deleting) return
+
+    if (isDirty) {
+      setConfirmAction('discard')
+      return
+    }
+
+    onClose(false)
+  }
+
+  function requestSave(): void {
+    if (saving || loading || deleting) return
+
+    if (!rows.some(hasData)) {
+      setError('There are no batch changes to save')
+      return
+    }
+
+    setConfirmAction('save')
+  }
+
   function addBlankRowAndFocus(): void {
     const newRowIndex = rows.length
 
     setRows((current) => [...current, emptyRow()])
+    setSelectedRow(newRowIndex)
 
     requestAnimationFrame(() => {
-      focus(newRowIndex, 0)
+      requestAnimationFrame(() => {
+        refs.current[newRowIndex]?.[0]?.focus()
+      })
     })
   }
 
-  // Keyboard navigation while editing an input.
+  // Keyboard navigation while editing a field.
   function handleInputKeyDown(
     event: React.KeyboardEvent<HTMLInputElement>,
     row: number,
@@ -145,7 +178,6 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
-
       selectRow(row)
       return
     }
@@ -157,92 +189,116 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
       if (hasData(rows[row])) {
         setDeleteConfirmRow(row)
       }
-
       return
     }
 
     if (event.key === 'ArrowRight') {
       event.preventDefault()
+      event.stopPropagation()
 
       if (field < fields.length - 1) {
         focus(row, field + 1)
       }
-
       return
     }
 
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
+      event.stopPropagation()
 
       if (field > 0) {
         focus(row, field - 1)
       }
-
       return
     }
 
     if (event.key !== 'Enter') return
 
     event.preventDefault()
+    event.stopPropagation()
 
+    // Move to the next field in the current row.
     if (field < fields.length - 1) {
       focus(row, field + 1)
       return
     }
 
+    const currentRow = rows[row]
+
     // Last field of the final blank row.
     if (row === rows.length - 1) {
-      if (hasData(rows[row])) {
+      if (hasData(currentRow)) {
+        // Add another blank row and focus its first field.
         addBlankRowAndFocus()
+      } else {
+        // Empty final row: request save confirmation.
+        requestSave()
       }
-
       return
     }
 
-    // Move to the first field of the next row.
-    focus(row + 1, 0)
+    // Last field of an existing row: highlight next complete row.
+    selectRow(row + 1)
   }
 
-  // Keyboard navigation while a complete row is selected.
-  function handleWindowKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
-    if (event.target !== event.currentTarget) return
-
-    if (deleteConfirmRow !== null) {
+  // Keyboard navigation when a complete row is selected.
+  function handleWindowKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (confirmAction !== null || deleteConfirmRow !== null) {
       if (event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
+        setConfirmAction(null)
         setDeleteConfirmRow(null)
+
+        requestAnimationFrame(() => {
+          windowRef.current?.focus()
+        })
       }
+
       return
     }
 
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
-      onClose(false)
+      requestClose()
       return
     }
 
+    if (event.target !== event.currentTarget) return
+
     if (event.key === 'ArrowDown') {
       event.preventDefault()
+      event.stopPropagation()
       selectRow(Math.min(selectedRow + 1, rows.length - 1))
       return
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault()
+      event.stopPropagation()
       selectRow(Math.max(selectedRow - 1, 0))
       return
     }
 
     if (event.key === 'Enter') {
       event.preventDefault()
-      focus(selectedRow, 0)
+      event.stopPropagation()
+
+      if (selectedRow === rows.length - 1 && hasData(rows[selectedRow])) {
+        focus(selectedRow, 0)
+      } else if (selectedRow === rows.length - 1) {
+        focus(selectedRow, 0)
+      } else {
+        focus(selectedRow, 0)
+      }
+
       return
     }
 
     if (event.key === 'Delete') {
       event.preventDefault()
+      event.stopPropagation()
 
       const row = rows[selectedRow]
 
@@ -252,7 +308,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     }
   }
 
-  // Permanently delete the selected batch.
+  // Permanently delete a batch.
   async function confirmDelete(): Promise<void> {
     if (deleteConfirmRow === null) return
 
@@ -260,6 +316,12 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     const row = rows[rowIndex]
 
     if (!row) return
+
+    if (Number(row.stock) !== 0) {
+      setError('Batch can only be deleted when stock is 0')
+      setDeleteConfirmRow(null)
+      return
+    }
 
     try {
       setDeleting(true)
@@ -279,9 +341,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         return updated
       })
 
-      const nextSelectedRow = Math.min(rowIndex, Math.max(0, rows.length - 2))
-
-      setSelectedRow(nextSelectedRow)
+      setSelectedRow(Math.min(rowIndex, Math.max(0, rows.length - 2)))
       setDeleteConfirmRow(null)
 
       requestAnimationFrame(() => {
@@ -295,7 +355,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
   }
 
   // Save all batch rows.
-  async function save(): Promise<void> {
+  async function saveChanges(): Promise<void> {
     try {
       setSaving(true)
       setError('')
@@ -332,11 +392,40 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         })
       }
 
+      initialRowsRef.current = JSON.parse(JSON.stringify(rows))
+      setConfirmAction(null)
       onClose(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save batches')
+      setConfirmAction(null)
     } finally {
       setSaving(false)
+    }
+  }
+
+  function handleConfirmationKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      setConfirmAction(null)
+      setDeleteConfirmRow(null)
+
+      requestAnimationFrame(() => {
+        windowRef.current?.focus()
+      })
+
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (confirmAction === 'save') {
+        void saveChanges()
+      } else if (confirmAction === 'discard') {
+        onClose(false)
+      }
     }
   }
 
@@ -347,13 +436,12 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         <div className="batch-header">
           <div>
             <strong>BATCH-WISE STOCK ADJUSTMENT</strong>
-
             <div>
               {product.name} | {product.barcode || 'No Barcode'}
             </div>
           </div>
 
-          <button type="button" disabled={saving || deleting} onClick={() => onClose(false)}>
+          <button type="button" disabled={saving || deleting} onClick={requestClose}>
             ✕
           </button>
         </div>
@@ -426,7 +514,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
           </table>
         </div>
 
-        {/* Stock summary */}
+        {/* Summary */}
         <div className="batch-summary">
           Product stock: {product.stock_quantity}
           <span>
@@ -440,25 +528,75 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         {/* Footer */}
         <div className="batch-footer">
           <span>↑ ↓: Select Row</span>
-          <span>Enter: Edit Row / Next Field</span>
+          <span>Enter: Edit / Next Row</span>
           <span>← →: Previous / Next Field</span>
           <span>Delete: Delete Selected Row</span>
           <span>Esc: Close</span>
 
           <div>
-            <button type="button" disabled={saving || deleting} onClick={() => onClose(false)}>
+            <button type="button" disabled={saving || deleting} onClick={requestClose}>
               Cancel
             </button>
 
-            <button
-              type="button"
-              disabled={saving || loading || deleting}
-              onClick={() => void save()}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
+            <button type="button" disabled={saving || loading || deleting} onClick={requestSave}>
+              Save Changes
             </button>
           </div>
         </div>
+
+        {/* Save / discard confirmation */}
+        {confirmAction !== null && (
+          <div className="batch-confirm-backdrop">
+            <div
+              className="batch-confirm-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="batch-action-title"
+              tabIndex={-1}
+              onKeyDown={handleConfirmationKeyDown}
+            >
+              <h3 id="batch-action-title">
+                {confirmAction === 'save' ? 'Save Changes?' : 'Discard Changes?'}
+              </h3>
+
+              <p>
+                {confirmAction === 'save'
+                  ? 'Are you sure you want to save all batch changes?'
+                  : 'You have unsaved changes. Are you sure you want to close without saving?'}
+              </p>
+
+              <div className="batch-confirm-actions">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    setConfirmAction(null)
+
+                    requestAnimationFrame(() => {
+                      windowRef.current?.focus()
+                    })
+                  }}
+                >
+                  No
+                </button>
+
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    if (confirmAction === 'save') {
+                      void saveChanges()
+                    } else {
+                      onClose(false)
+                    }
+                  }}
+                >
+                  {saving ? 'Saving...' : confirmAction === 'save' ? 'Yes, Save' : 'Yes, Discard'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete confirmation */}
         {deleteConfirmRow !== null && (

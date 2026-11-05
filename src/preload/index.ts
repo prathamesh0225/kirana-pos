@@ -108,7 +108,10 @@ const api = {
         sellingRatePaise: number
         quantity: number
       }
-    ) => ipcRenderer.invoke('products:saveStockBatch', productId, data)
+    ) => ipcRenderer.invoke('products:saveStockBatch', productId, data),
+
+    deleteStockBatch: (productId: number, batchId: number) =>
+      ipcRenderer.invoke('products:deleteStockBatch', productId, batchId)
   },
 
   billing: {
