@@ -49,7 +49,9 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
   const [deleting, setDeleting] = useState(false)
 
   const refs = useRef<Array<Array<HTMLInputElement | null>>>([])
+  const rowRefs = useRef<Array<HTMLTableRowElement | null>>([])
   const windowRef = useRef<HTMLDivElement>(null)
+  const tableWrapRef = useRef<HTMLDivElement>(null)
   const initialRowsRef = useRef<BatchForm[]>([])
 
   const isDirty = JSON.stringify(rows) !== JSON.stringify(initialRowsRef.current)
@@ -92,9 +94,36 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
       requestAnimationFrame(() => {
         windowRef.current?.focus()
+        scrollRowIntoView(0)
       })
     }
   }, [loading])
+
+  // Keep the selected row visible inside the table's scroll container.
+  function scrollRowIntoView(rowIndex: number): void {
+    requestAnimationFrame(() => {
+      const rowElement = rowRefs.current[rowIndex]
+      const container = tableWrapRef.current
+
+      if (!rowElement || !container) return
+
+      const rowRect = rowElement.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+
+      const header = container.querySelector('thead')
+      const headerHeight = header?.getBoundingClientRect().height ?? 0
+
+      // Do not let the selected row disappear behind the sticky header.
+      const visibleTop = containerRect.top + headerHeight
+      const visibleBottom = containerRect.bottom
+
+      if (rowRect.top < visibleTop) {
+        container.scrollTop -= visibleTop - rowRect.top
+      } else if (rowRect.bottom > visibleBottom) {
+        container.scrollTop += rowRect.bottom - visibleBottom
+      }
+    })
+  }
 
   function updateRow(rowIndex: number, field: keyof BatchForm, value: string): void {
     setRows((current) =>
@@ -115,11 +144,17 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     )
   }
 
+  // Focus a field and make its row visible.
   function focus(row: number, field: number): void {
-    setSelectedRow(row)
+    const safeRow = Math.max(0, Math.min(row, rows.length - 1))
+    const safeField = Math.max(0, Math.min(field, fields.length - 1))
+
+    setSelectedRow(safeRow)
 
     requestAnimationFrame(() => {
-      const input = refs.current[row]?.[field]
+      scrollRowIntoView(safeRow)
+
+      const input = refs.current[safeRow]?.[safeField]
       input?.focus()
       input?.select()
     })
@@ -127,7 +162,10 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
   // Select a complete row without focusing an input.
   function selectRow(row: number): void {
-    setSelectedRow(row)
+    const safeRow = Math.max(0, Math.min(row, rows.length - 1))
+
+    setSelectedRow(safeRow)
+    scrollRowIntoView(safeRow)
 
     requestAnimationFrame(() => {
       windowRef.current?.focus()
@@ -164,6 +202,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        scrollRowIntoView(newRowIndex)
         refs.current[newRowIndex]?.[0]?.focus()
       })
     })
@@ -189,6 +228,23 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
       if (hasData(rows[row])) {
         setDeleteConfirmRow(row)
       }
+      return
+    }
+
+    // Move vertically while keeping the same column.
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      event.stopPropagation()
+
+      focus(Math.min(row + 1, rows.length - 1), field)
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      event.stopPropagation()
+
+      focus(Math.max(row - 1, 0), field)
       return
     }
 
@@ -225,7 +281,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
     const currentRow = rows[row]
 
-    // Last field of the final blank row.
+    // Last field of the final row.
     if (row === rows.length - 1) {
       if (hasData(currentRow)) {
         // Add another blank row and focus its first field.
@@ -284,15 +340,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
     if (event.key === 'Enter') {
       event.preventDefault()
       event.stopPropagation()
-
-      if (selectedRow === rows.length - 1 && hasData(rows[selectedRow])) {
-        focus(selectedRow, 0)
-      } else if (selectedRow === rows.length - 1) {
-        focus(selectedRow, 0)
-      } else {
-        focus(selectedRow, 0)
-      }
-
+      focus(selectedRow, 0)
       return
     }
 
@@ -341,11 +389,13 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         return updated
       })
 
-      setSelectedRow(Math.min(rowIndex, Math.max(0, rows.length - 2)))
+      const nextSelectedRow = Math.min(rowIndex, Math.max(0, rows.length - 2))
+      setSelectedRow(nextSelectedRow)
       setDeleteConfirmRow(null)
 
       requestAnimationFrame(() => {
         windowRef.current?.focus()
+        scrollRowIntoView(nextSelectedRow)
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete batch')
@@ -447,7 +497,7 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
         </div>
 
         {/* Batch table */}
-        <div className="batch-table-wrap">
+        <div ref={tableWrapRef} className="batch-table-wrap">
           <table className="batch-table">
             <thead>
               <tr>
@@ -469,6 +519,9 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
                 rows.map((row, rowIndex) => (
                   <tr
                     key={row.id ?? `new-${rowIndex}`}
+                    ref={(element) => {
+                      rowRefs.current[rowIndex] = element
+                    }}
                     className={[
                       rowIndex === selectedRow ? 'batch-selected-row' : '',
                       rowIndex === rows.length - 1 ? 'batch-new-row' : ''
@@ -501,7 +554,10 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
                           value={row[field]}
                           disabled={saving || deleting}
                           onClick={(event) => event.stopPropagation()}
-                          onFocus={() => setSelectedRow(rowIndex)}
+                          onFocus={() => {
+                            setSelectedRow(rowIndex)
+                            scrollRowIntoView(rowIndex)
+                          }}
                           onChange={(event) => updateRow(rowIndex, field, event.target.value)}
                           onKeyDown={(event) => handleInputKeyDown(event, rowIndex, fieldIndex)}
                         />
@@ -527,8 +583,8 @@ function StockBatchManager({ product, onClose }: Props): React.JSX.Element {
 
         {/* Footer */}
         <div className="batch-footer">
-          <span>↑ ↓: Select Row</span>
-          <span>Enter: Edit / Next Row</span>
+          <span>↑ ↓: Select / Move Row</span>
+          <span>Enter: Edit / Next Field</span>
           <span>← →: Previous / Next Field</span>
           <span>Delete: Delete Selected Row</span>
           <span>Esc: Close</span>
