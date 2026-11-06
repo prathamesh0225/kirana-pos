@@ -331,10 +331,6 @@ function ItemMaster({
       if (event.key === 'F4') {
         event.preventDefault()
 
-        if (mode !== 'manage') {
-          return
-        }
-
         const selectedProduct = visibleProducts[selectedIndex]
 
         if (selectedProduct) {
@@ -350,7 +346,7 @@ function ItemMaster({
        * F5:
        * Item Master → select product → Date Filter
        */
-      if (event.key === 'F5' && mode === 'manage') {
+      if (event.key === 'F5') {
         event.preventDefault()
 
         const selectedProduct = visibleProducts[selectedIndex]
@@ -368,12 +364,13 @@ function ItemMaster({
         return
       }
 
-      if (event.key === 'F6' && mode === 'manage') {
+      if (event.key === 'F6') {
         event.preventDefault()
 
         const product = visibleProducts[selectedIndex]
 
         if (product) {
+          rememberSelectedProduct(product.id)
           setBatchProduct(product)
         }
 
@@ -475,7 +472,7 @@ function ItemMaster({
         return
       }
 
-      if ((event.key === '+' || event.key === '=') && mode === 'manage') {
+      if (event.key === '+' || event.key === '=') {
         event.preventDefault()
 
         const selectedProduct = visibleProducts[selectedIndex]
@@ -617,7 +614,7 @@ function ItemMaster({
             <span>F4 Stock Adj</span>
             <span>F5 History</span>
             <span>F6 Batches</span>
-            <span>Enter No Action</span>
+            <span>{mode === 'select' ? 'Enter Select' : 'Enter No Action'}</span>
             <span>Esc Back</span>
             <span>DELETE Enable/Disable</span>
           </div>

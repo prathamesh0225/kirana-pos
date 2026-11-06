@@ -1353,7 +1353,7 @@ export function getAvailableBatchesForProduct(productId: number): StockBatchReco
   const rows = db
     .prepare(
       `
-      SELECT
+            SELECT
         id,
         product_id,
         batch_number,
@@ -1366,12 +1366,8 @@ export function getAvailableBatchesForProduct(productId: number): StockBatchReco
       WHERE product_id = ?
         AND quantity > 0
       ORDER BY
-        CASE
-          WHEN expiry_date IS NULL OR expiry_date = '' THEN 1
-          ELSE 0
-        END,
-        expiry_date ASC,
-        id ASC
+        updated_at DESC,
+        id DESC
       `
     )
     .all(productId) as Array<{

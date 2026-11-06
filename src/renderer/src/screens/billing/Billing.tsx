@@ -305,6 +305,12 @@ function Billing({
         throw new Error('No printer is configured. Set the printer in Settings.')
       }
 
+      // Include only active products and temporary bill items.
+      // Deleted products and empty rows are excluded from the receipt and totals.
+      const billLines = lines.filter(
+        (line) => !line.deleted && (line.productId !== null || line.isTemporary)
+      )
+
       const receipt = {
         billNumber: displaySession.billNumber,
         saleDate: new Date().toLocaleDateString('en-IN'),
@@ -316,28 +322,31 @@ function Billing({
         customerName: displaySession.customerName || undefined,
         customerMobile: displaySession.customerMobile || undefined,
 
-        lines: lines
-          .filter((line) => !line.deleted && (line.productId !== null || line.isTemporary))
-          .map((line) => ({
-            productName: line.productName,
-            mrpPaise: line.mrpPaise,
-            quantity: line.quantity,
-            freeQuantity: line.freeQuantity,
-            ratePaise: line.ratePaise,
-            amountPaise: line.amountPaise
-          })),
+        // Receipt product rows
+        lines: billLines.map((line) => ({
+          productName: line.productName,
+          mrpPaise: line.mrpPaise,
+          quantity: line.quantity,
+          freeQuantity: line.freeQuantity,
+          ratePaise: line.ratePaise,
+          amountPaise: line.amountPaise
+        })),
 
-        totalMrpPaise: lines.reduce(
+        // Total MRP of active products only
+        totalMrpPaise: billLines.reduce(
           (total, line) => total + Math.round(line.mrpPaise * line.quantity),
           0
         ),
 
-        discountPaise: lines.reduce(
-          (total, line) => total + Math.round((line.mrpPaise - line.ratePaise) * line.quantity),
+        // Discount of active products only
+        discountPaise: billLines.reduce(
+          (total, line) =>
+            total + Math.max(0, Math.round((line.mrpPaise - line.ratePaise) * line.quantity)),
           0
         ),
 
-        totalAmountPaise: lines.reduce((total, line) => total + line.amountPaise, 0),
+        // Final bill amount of active products only
+        totalAmountPaise: billLines.reduce((total, line) => total + line.amountPaise, 0),
 
         paymentMethod: pendingPayment?.mode,
         paidPaise: pendingPayment?.paidPaise,
